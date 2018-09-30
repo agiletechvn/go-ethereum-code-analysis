@@ -237,73 +237,73 @@ Construction method
 ### Timeout check
 
 ```go
-    // timeoutLoop runs every 5 minutes and deletes filters that have not been recently used.
-    // Tt is started when the api is created.
-    // 	Check every 5 minutes. If the filter expires, delete it.
-    func (api *PublicFilterAPI) timeoutLoop() {
-    	ticker := time.NewTicker(5 * time.Minute)
-    	for {
-    		<-ticker.C
-    		api.filtersMu.Lock()
-    		for id, f := range api.filters {
-    			select {
-    			case <-f.deadline.C:
-    				f.s.Unsubscribe()
-    				delete(api.filters, id)
-    			default:
-    				continue
-    			}
-    		}
-    		api.filtersMu.Unlock()
-    	}
+// timeoutLoop runs every 5 minutes and deletes filters that have not been recently used.
+// Tt is started when the api is created.
+//  Check every 5 minutes. If the filter expires, delete it.
+func (api *PublicFilterAPI) timeoutLoop() {
+  ticker := time.NewTicker(5 * time.Minute)
+  for {
+    <-ticker.C
+    api.filtersMu.Lock()
+    for id, f := range api.filters {
+      select {
+      case <-f.deadline.C:
+        f.s.Unsubscribe()
+        delete(api.filters, id)
+      default:
+        continue
+      }
     }
+    api.filtersMu.Unlock()
+  }
+}
 ```
 
 NewPendingTransactionFilter to create a PendingTransactionFilter. This method is used for channels that cannot create long connections (such as HTTP). If a channel that can establish long links (such as WebSocket) can be processed using the send subscription mode provided by rpc, there is no need for a continuous round. Inquire
 
 ```go
-		// NewPendingTransactionFilter creates a filter that fetches pending transaction hashes
-		// as transactions enter the pending state.
-		//
-		// It is part of the filter package because this filter can be used throug the
-		// `eth_getFilterChanges` polling method that is also used for log filters.
-		//
-		// https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_newpendingtransactionfilter
-		func(api\ * PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
-				var (
-						pendingTxs = make(chan common.Hash)
-						// Subscribe to this message in the event system
-						pendingTxSub = api.events.SubscribePendingTxEvents(pendingTxs)
-				)
-				api.filtersMu.Lock()
-				api.filters[pendingTxSub.ID] = & filter {
-						typ: PendingTransactionsSubscription,
-						deadline: time.NewTimer(deadline),
-						hashes: make([] common.Hash, 0),
-						s: pendingTxSub
-				}
-				api.filtersMu.Unlock()
-				go func() {
-						for {
-								select {
-										case ph:
-												= < -pendingTxs: // received pendingTxs，stored in the filter hashes
-														api.filtersMu.Lock()
-												if f, found: = api.filters[pendingTxSub.ID];
-												found {
-														f.hashes = append(f.hashes, ph)
-												}
-												api.filtersMu.Unlock()
-										case <-pendingTxSub.Err():
-												api.filtersMu.Lock()
-												delete(api.filters, pendingTxSub.ID)
-												api.filtersMu.Unlock()
-												return
-								}
-						}
-				}()
-				return pendingTxSub.ID
-		}
+// NewPendingTransactionFilter creates a filter that fetches pending transaction hashes
+// as transactions enter the pending state.
+//
+// It is part of the filter package because this filter can be used throug the
+// `eth_getFilterChanges` polling method that is also used for log filters.
+//
+// https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_newpendingtransactionfilter
+func(api\ * PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
+    var (
+        pendingTxs = make(chan common.Hash)
+        // Subscribe to this message in the event system
+        pendingTxSub = api.events.SubscribePendingTxEvents(pendingTxs)
+    )
+    api.filtersMu.Lock()
+    api.filters[pendingTxSub.ID] = & filter {
+        typ: PendingTransactionsSubscription,
+        deadline: time.NewTimer(deadline),
+        hashes: make([] common.Hash, 0),
+        s: pendingTxSub
+    }
+    api.filtersMu.Unlock()
+    go func() {
+        for {
+            select {
+                case ph:
+                    = < -pendingTxs: // received pendingTxs，stored in the filter hashes
+                        api.filtersMu.Lock()
+                    if f, found: = api.filters[pendingTxSub.ID];
+                    found {
+                        f.hashes = append(f.hashes, ph)
+                    }
+                    api.filtersMu.Unlock()
+                case <-pendingTxSub.Err():
+                    api.filtersMu.Lock()
+                    delete(api.filters, pendingTxSub.ID)
+                    api.filtersMu.Unlock()
+                    return
+            }
+        }
+    }()
+    return pendingTxSub.ID
+}
 ```
 
 Polling: GetFilterChanges
@@ -417,7 +417,6 @@ There is a Filter object defined in fiter.go. This object is mainly used to perf
 ### Data structure
 
 ```go
-
     type Backend interface {
     	ChainDb() ethdb.Database
     	EventMux() *event.TypeMux
