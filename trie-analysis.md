@@ -1,4 +1,4 @@
-包trie 实现了Merkle Patricia Tries，这里用简称MPT来称呼这种数据结构，这种数据结构实际上是一种Trie树变种，MPT是以太坊中一种非常重要的数据结构，用来存储用户账户的状态及其变更、交易信息、交易的收据信息。MPT实际上是三种数据结构的组合，分别是Trie树， Patricia Trie， 和Merkle树。下面分别介绍这三种数据结构。
+The package trie implements Merkle Patricia Tries, which is referred to herein as MPT as a data structure. This data structure is actually a Trie tree variant. MPT is a very important data structure in Ethereum for storing user accounts. Status and its changes, transaction information, and receipt information for the transaction. MPT is actually a combination of three data structures: Trie, Patricia Trie, and Merkle. The three data structures are described separately below.
 
 ## Trie树 (引用介绍 http://dongxicheng.org/structure/trietree/)
 Trie树，又称字典树，单词查找树或者前缀树，是一种用于快速检索的多叉树结构，如英文字母的字典树是一个26叉树，数字的字典树是一个10叉树。
@@ -24,16 +24,16 @@ Trie树的基本性质可以归纳为：
 
 上图存储的8个Key Value对，可以看到前缀树的特点。
 
-|Key           | value |
-| ------------- | ---: |
-|6c0a5c71ec20bq3w|5     |
-|6c0a5c71ec20CX7j|27    |
-|6c0a5c71781a1FXq|18    |
-|6c0a5c71781a9Dog|64    |
-|6c0a8f743b95zUfe|30    |
-|6c0a8f743b95jx5R|2     |
-|6c0a8f740d16y03G|43    |
-|6c0a8f740d16vcc1|48    |
+| Key              | value |
+| ---------------- | ----: |
+| 6c0a5c71ec20bq3w | 5     |
+| 6c0a5c71ec20CX7j | 27    |
+| 6c0a5c71781a1FXq | 18    |
+| 6c0a5c71781a9Dog | 64    |
+| 6c0a8f743b95zUfe | 30    |
+| 6c0a8f743b95jx5R | 2     |
+| 6c0a8f740d16y03G | 43    |
+| 6c0a8f740d16vcc1 | 48    |
 
 ## Merkle树 (参考 http://blog.csdn.net/wo541075754/article/details/54632929）
 Merkle Tree，通常也被称作Hash Tree，顾名思义，就是存储hash值的一棵树。Merkle树的叶子是数据块(例如，文件或者文件的集合)的hash值。非叶节点是其对应子节点串联字符串的hash。
