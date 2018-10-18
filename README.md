@@ -30,6 +30,6 @@ The process, I hope to start from the low-level technical components that rely o
   - [creation block](/core-genesis-analysis.md)
   - [blockchain -analysis](/core-blockchain-analysis.md)
 - [miner analysis & CPU mining](/miner-analysis-CPU-mining.md)
-- [pow-algorithm](/pow-analysis.md)
+- [pow, poa, pos algorithms](/pow-analysis.md)
 - [ethereum test network Clique_PoA introduciton](/ethereum-Clique_PoA-introduction.md)
 - [swarm, raw & file upload, pss and feed](/ethereum-swarm-introduction.md)
