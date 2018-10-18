@@ -7,9 +7,9 @@ The process, I hope to start from the low-level technical components that rely o
 
 ## Table of contents
 
-- [go ethereum code analysis](/go-ethereum-code-analysis.md)
+- [go ethereum code analysis (account, smart contract, logs, etc...)](/go-ethereum-code-analysis.md)
 - [yellow book symbol index](symbol-index.md)
-- [rlp analysis](/rlp-analysis.md)
+- [rlp, rlpx analysis](/rlp-analysis.md)
 - [trie source analysis](/trie-analysis.md)
 - [ethdb analysis](/ethdb-analysis.md)
 - [rpc analysis](/rpc-analysis.md)
@@ -17,8 +17,8 @@ The process, I hope to start from the low-level technical components that rely o
 - [eth protocol analysis](/eth-analysis.md)
 - **core analysis**
   - [blockchain index, chain_indexer analysis](/core-chain_indexer-analysis.md)
-  - [bloom filter index, bloombits -analysis](/core-bloombits-analysis.md)
-  - [ethereum trie, tree management, rollback, state -analysis](/core-state-analysis.md)
+  - [bloom filter index, bloombits-analysis](/core-bloombits-analysis.md)
+  - [ethereum trie, tree management, rollback, state-analysis](/core-state-analysis.md)
   - [transaction processing](/core-state-process-analysis.md)
   - **vm analysis**
     - [stack & data structure](/core-vm-stack-memory-analysis.md)
@@ -28,7 +28,7 @@ The process, I hope to start from the low-level technical components that rely o
     - [transaction execution](/core-txlist-data-structure-analysis.md)
     - [transaction pool management](/core-txpool-analysis.md)
   - [creation block](/core-genesis-analysis.md)
-  - [blockchain -analysis](/core-blockchain-analysis.md)
+  - [blockchain-analysis](/core-blockchain-analysis.md)
 - [miner analysis & CPU mining](/miner-analysis-CPU-mining.md)
 - [pow, poa, pos algorithms](/pow-analysis.md)
 - [ethereum test network Clique_PoA introduciton](/ethereum-Clique_PoA-introduction.md)
