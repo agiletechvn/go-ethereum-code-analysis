@@ -1,8 +1,9 @@
-# go-ethereum-code-analysis
+# go-ethereum code analysis
 
 **I hope to analyze the code of Ethereum to learn the use of blockchain technology and GO language.**
 
-Analysis[go-ethereum](https://github.com/ethereum/go-ethereum)The process, I hope to start from the low-level technical components that rely on less, and slowly go deep into the core logic.
+Analysis of [go-ethereum](https://github.com/ethereum/go-ethereum)  
+The process, I hope to start from the low-level technical components that rely on less, and slowly go deep into the core logic.
 
 ## Table of contents
 
