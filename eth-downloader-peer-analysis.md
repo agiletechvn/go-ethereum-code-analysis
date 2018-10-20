@@ -265,6 +265,7 @@ medianRTT, find the median of the RTT of the peerset,
 ```go
 // medianRTT returns the median RTT of te peerset, considering only the tuning
 // peers if there are more peers available.
+// qos: quality of service
 func(ps * peerSet) medianRTT() time.Duration {
     // Gather all the currnetly measured round trip times
     ps.lock.RLock()
