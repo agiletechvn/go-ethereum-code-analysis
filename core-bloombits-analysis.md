@@ -100,7 +100,6 @@ graph LR
 subgraph Requests
 	id1(sections)
 	id2((scheduleRequests))
-	dist(dist)
 end
 id1 --> id2
 id2 --> dist
@@ -108,7 +107,6 @@ id2 --> dist
 subgraph Delivers
 	id3((scheduleDelivers))
 	id4>deliver]
-	done(done)
 end
 id2 --<b>pend</b>--> id3
 id4 --<b>response done</b>--> id3
