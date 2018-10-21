@@ -100,7 +100,7 @@ graph LR
 subgraph ""
     IsraelsFatherGan(Mейр Gan <br>tbd-tbd)
     IsraelsFathersWife((Altshuller <br>tbd-tbd))
-		IsraelsFathersWife1((Altshuller <br>tbd-tbd))
+		IsraelsFathersWifeAben((Altshuller <br>tbd-tbd))
 end
 IsraelsFathersWife --> IsraelsFatherGan
 IsraelsFatherGan --> dist
