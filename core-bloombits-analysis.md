@@ -96,16 +96,17 @@ func (s *scheduler) run(sections chan uint64, dist chan *request, done chan []by
 
 ```mermaid
 graph LR
-
+	subgraph ""
 	id1(sections) --> id2((scheduleRequests))
 	id2 --> dist
-
+	end
+	subgraph ""
 	id2 --<b>pend</b>--> id3((scheduleDelivers))
 	id4>deliver] --<b>response done</b>--> id3
 	id3 --> done
-
-	style id2 fill: #1769aa, stroke: #333, stroke-width:2px, color:#fff;
-	style id3 fill: #1769aa, stroke: #333, stroke-width:2px, color:#fff;
+	end
+	style id2 stroke: #333, stroke-width:2px;
+	style id3 stroke: #333, stroke-width:2px;
 ```
 
 The ellipse in the figure represents the goroutine. The rectangle represents the channel. The triangle represents the external method call.
