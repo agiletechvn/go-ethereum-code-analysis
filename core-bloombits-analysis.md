@@ -96,11 +96,11 @@ func (s *scheduler) run(sections chan uint64, dist chan *request, done chan []by
 
 ```mermaid
 graph LR
-	subgraph
+	subgraph ""
 	id1(sections) --> id2((scheduleRequests))
 	id2 --> dist
 	end
-	subgraph
+	subgraph ""
 	id2 --pend--> id3((scheduleDelivers))
 	id4>deliver] --response done--> id3
 	id3 --> done
@@ -546,8 +546,8 @@ func (m *Matcher) subMatch(source chan *partialMatches, dist chan *request, bloo
 			sectionSources[i][j] = make(chan uint64, cap(source))
 			sectionSinks[i][j] = make(chan []byte, cap(source))
 			// Initiate a scheduling request for this bit, passing the section that needs to be queried via sectionSources[i][j]
-     			// Receive results via sectionSinks[i][j]
-     			// dist is the channel through which the scheduler passes the request. This is in the introduction of the scheduler.
+			// Receive results via sectionSinks[i][j]
+			// dist is the channel through which the scheduler passes the request. This is in the introduction of the scheduler.
 			m.schedulers[bit].run(sectionSources[i][j], dist, sectionSinks[i][j], session.quit, &session.pend)
 		}
 	}
@@ -583,7 +583,7 @@ func (m *Matcher) subMatch(source chan *partialMatches, dist chan *request, bloo
 				for _, bloomSources := range sectionSources {
 					for _, bitSource := range bloomSources {
 						// Pass to the input channel of all the schedulers above. Apply for these
-			      // The specified bit of the section is searched.
+						// The specified bit of the section is searched.
 						// The result will be sent to sectionSinks[i][j]
 						select {
 						case <-session.quit:
@@ -615,7 +615,7 @@ func (m *Matcher) subMatch(source chan *partialMatches, dist chan *request, bloo
 
 			case subres, ok := <-process:
 				// There is a problem here. Is it possible to order out. Because the channels are all cached. May be queried quickly
-     				// View the implementation of the scheduler, the scheduler is guaranteed to be in order. How come in, how will you go out.
+				// View the implementation of the scheduler, the scheduler is guaranteed to be in order. How come in, how will you go out.
 				// Notified of a section being retrieved
 				if !ok {
 					return
@@ -626,7 +626,7 @@ func (m *Matcher) subMatch(source chan *partialMatches, dist chan *request, bloo
 					var andVector []byte
 					for _, bitSink := range bloomSinks {
 						// Here you can receive three values each representing the value of the Bloom filter corresponding to the subscript, and perform the AND operation on these three values.
-     						// It is possible to get those blocks that may have corresponding values.
+						// It is possible to get those blocks that may have corresponding values.
 						var data []byte
 						select {
 						case <-session.quit:
