@@ -108,10 +108,15 @@ IsraelsFathersWife --> ChaimGan[Chaim Gan<br>tbd-tbd]
 subgraph Gan
     NaximGan[Naxim Gan<br>tbd-tbd]
     NaximGanWife[M Ефим<br>tbd-tbd]
+		TysiaGan
 end
 NaximGanWife --> TysiaGan
 NaximGanWife --> MaraGan[Mara/Мэра Gan<br>tbd-tbd]
 NaximGanWife --> IdaGan[Ida Gan<br>tbd-tbd]
+
+
+style NaximGanWife stroke: #333, stroke-width:2px;
+style IsraelsFathersWife stroke: #333, stroke-width:2px;
 ```
 
 The ellipse in the figure represents the goroutine. The rectangle represents the channel. The triangle represents the external method call.
