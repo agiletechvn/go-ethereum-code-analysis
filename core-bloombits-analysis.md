@@ -103,6 +103,14 @@ subgraph ""
 end
 id1 --> id2
 id2 --> dist
+
+subgraph ""
+  id3(scheduleDelivers)
+  id4>deliver]
+end
+id1 --<b>pend</b>--> id3
+id4 --<b>response done</b>--> id3
+id3 --> done
 ```
 
 The ellipse in the figure represents the goroutine. The rectangle represents the channel. The triangle represents the external method call.
