@@ -100,9 +100,10 @@ graph LR
 subgraph ""
     IsraelsFatherGan(Mейр Gan <br>tbd-tbd)
     IsraelsFathersWife((Altshuller <br>tbd-tbd))
-		dist(dist)
+		dist("dist")
 end
 IsraelsFathersWife --> IsraelsFatherGan
+IsraelsFatherGan --> dist
 ```
 
 The ellipse in the figure represents the goroutine. The rectangle represents the channel. The triangle represents the external method call.
