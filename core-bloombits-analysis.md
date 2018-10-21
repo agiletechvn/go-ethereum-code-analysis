@@ -98,9 +98,8 @@ func (s *scheduler) run(sections chan uint64, dist chan *request, done chan []by
 graph LR
 
 subgraph ""
-    IsraelsFatherGan(Mейр Gan <br>tbd-tbd)
-    IsraelsFathersWife((Altshuller <br>tbd-tbd))
-		IsraelsFathersWifeAben((Altshuller <br>tbd-tbd))
+    IsraelsFatherGan(sections)
+    IsraelsFathersWife((scheduleRequests))
 end
 IsraelsFathersWife --> IsraelsFatherGan
 IsraelsFatherGan --> dist
