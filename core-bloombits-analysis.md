@@ -98,12 +98,12 @@ func (s *scheduler) run(sections chan uint64, dist chan *request, done chan []by
 graph LR
 
 subgraph ""
-	id1(sections)
-	id2((scheduleRequests))
-	dist(dist)
+    IsraelsFatherGan(Mейр Gan <br>tbd-tbd)
+    IsraelsFathersWife((Altshuller <br>tbd-tbd))
+		dist(dist)
 end
-id1 --> id2
-id2 --> dist
+IsraelsFathersWife --> IsraelsFatherGan
+IsraelsFatherGan --> dist
 ```
 
 The ellipse in the figure represents the goroutine. The rectangle represents the channel. The triangle represents the external method call.
