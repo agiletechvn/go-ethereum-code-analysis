@@ -102,18 +102,6 @@ subgraph ""
 	scheduleRequests((scheduleRequests))
 end
 sections --> scheduleRequests
-scheduleRequests --> dist
-
-subgraph ""
-	scheduleDelivers((scheduleDelivers))
-	deliver>deliver]
-end
-scheduleRequests --<b>pend</b>--> scheduleDelivers
-deliver --<b>response done</b>--> scheduleDelivers
-scheduleDelivers --> done
-
-style scheduleRequests stroke: #333, stroke-width:2px;
-style scheduleDelivers stroke: #333, stroke-width:2px;
 ```
 
 The ellipse in the figure represents the goroutine. The rectangle represents the channel. The triangle represents the external method call.
