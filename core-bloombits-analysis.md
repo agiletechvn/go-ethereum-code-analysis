@@ -108,7 +108,7 @@ subgraph ""
   id3(scheduleDelivers)
   id4>deliver]
 end
-id1 --<b>pend</b>--> id3
+id2 --<b>pend</b>--> id3
 id4 --<b>response done</b>--> id3
 id3 --> done
 ```
