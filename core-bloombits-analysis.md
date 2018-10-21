@@ -97,20 +97,12 @@ func (s *scheduler) run(sections chan uint64, dist chan *request, done chan []by
 ```mermaid
 graph LR
 
-subgraph Gan
+subgraph ""
     IsraelsFatherGan(Mейр Gan <br>tbd-tbd)
     IsraelsFathersWife((Altshuller <br>tbd-tbd))
 end
 IsraelsFathersWife --> IsraelGan
 IsraelsFathersWife --> NaximGan[Naxim Gan<br>tbd-tbd]
-
-subgraph Gan
-    NaximGan[Naxim Gan<br>tbd-tbd]
-    NaximGanWife[M Ефим<br>tbd-tbd]
-end
-NaximGanWife --> TysiaGan
-NaximGanWife --> MaraGan[Mara/Мэра Gan<br>tbd-tbd]
-NaximGanWife --> IdaGan[Ida Gan<br>tbd-tbd]
 ```
 
 The ellipse in the figure represents the goroutine. The rectangle represents the channel. The triangle represents the external method call.
