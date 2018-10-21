@@ -98,8 +98,8 @@ func (s *scheduler) run(sections chan uint64, dist chan *request, done chan []by
 graph LR
 
 subgraph ""
-    id1(sections)
-    id2((scheduleRequests))
+  id1(sections)
+  id2((scheduleRequests))
 end
 id1 --> id2
 id2 --> dist
