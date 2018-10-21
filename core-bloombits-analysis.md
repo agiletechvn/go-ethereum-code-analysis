@@ -106,7 +106,6 @@ graph LR
 	id2 --> dist
 
 	subgraph ""
-		id2
 		id3((scheduleDelivers))
 		id4>deliver]
 		done
