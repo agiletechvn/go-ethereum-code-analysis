@@ -97,15 +97,23 @@ func (s *scheduler) run(sections chan uint64, dist chan *request, done chan []by
 ```mermaid
 graph LR
 
-	subgraph Requests
-		id1(sections) --> id2((scheduleRequests))
-		id2 --> dist
+	id1(sections) --> id2((scheduleRequests))
+	id2 --> dist
+
+	subgraph ""
+		id1
+		id2
+		dist
 	end
 
-	subgraph Delivers
-		id2 --<b>pend</b>--> id3((scheduleDelivers))
-		id4>deliver] --<b>response done</b>--> id3
-		id3 --> done
+	id2 --<b>pend</b>--> id3((scheduleDelivers))
+	id4>deliver] --<b>response done</b>--> id3
+	id3 --> done
+	subgraph ""
+		id2
+		id3
+		id4
+		done
 	end
 
 	style id2 stroke: #333, stroke-width:2px;
