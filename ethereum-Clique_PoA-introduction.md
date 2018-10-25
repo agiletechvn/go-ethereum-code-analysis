@@ -1,222 +1,206 @@
 https://github.com/ethereum/EIPs/issues/225
 
-Clique的模式下，用户是无法获取以太币的，因为无法挖矿，所以如果需要以太币， 需要通过特殊的途径来获取。
+In Clique mode, users can't get Ethereum because they can't mine, so if you need Ethereum, you need to get it through special channels.
 
-可以通过这个网站获取ether
+You can get ether from this website.
 
 https://faucet.rinkeby.io/
 
-需要有google+账号，facebook或者twitter账号才能获取， 详细的获取办法参考上面的网站。
+You need to have a google+ account, facebook or twitter account to get it. For detailed information, please refer to the above website.
 
+Clique is a Power of authority implementation of Ethereum and is now primarily used on the Rinkeby test network.
 
+## Background
 
-Clique 是以太坊的一个Power of authority 的实现， 现在主要在Rinkeby 测试网络使用。
+The first official test network of Ethereum was Morden. From July 2015 to November 2016, due to the accumulated garbage between Geth and Parity and some testnet consensus issues, it was decided to stop restarting testnet.
 
-## 背景
+Ropsten was born, cleaned up all the rubbish, starting with a clean slate. This operation continued until the end of February 2017, when malicious actors decided to abuse Pow and gradually increased GasLimit from the normal 4.7 million to 9 billion, at which time a huge transaction was sent to damage the entire network. Even before this, the attacker tried several very long blockchain reorganizations, resulting in network splits between different clients, even different versions.
 
-以太坊的第一个官方测试网是Morden。它从2015年7月到2016年11月，由于Geth和Parity之间累积的垃圾和一些testnet的共识问题，最终决定停止重新启动testnet。
+The root cause of these attacks is that the security of the PoW network is as secure as the computing power behind it. Restarting a new test network from scratch does not solve any problems because the attacker can install the same attack over and over again. The Parity team decided to take an urgent solution, roll back a large number of blocks, and develop a soft cross that does not allow GasLimit to exceed a certain threshold.
 
-Ropsten就这样诞生了，清理掉了所有的垃圾，从一个干净的石板开始。这一运行状况一直持续到2017年2月底，当时恶意行为者决定滥用Pow，并逐步将GasLimit从正常的470万提高到90亿，此时发送巨大的交易损害整个网络。甚至在此之前，攻击者尝试了多次非常长的区块链重组，导致不同客户端之间的网络分裂，甚至是不同的版本。
+Although this solution may work in the short term:
 
-这些攻击的根本原因在于PoW网络的安全性与它背后的计算能力一样安全。从零开始重新启动一个新的测试网络并不能解决任何问题，因为攻击者可以反复安装相同的攻击。Parity 团队决定采取一个紧急的解决办法，回滚大量的区块，制定一个不允许GasLimit超过一定门槛的软交叉。
+This is not elegant: Ethereum should have dynamic restrictions. This is not portable: other customers need to implement new fork logic on their own. It is not compatible with synchronous mode: fast sync and light client are both bad luck. This only extends the attack. Time: Garbage can still steadily advance in the endless situation Parity's solution is not perfect, but still feasible. I want to come up with a longer-term alternative solution that involves more, but should be simple enough to be launched in a reasonable amount of time.
 
-虽然这个解决方案可能在短期内工作：
+## Standardized PoA
 
-这并不高雅：以太坊应该有动态的限制
-这不是可移植的：其他客户需要自己实现新的fork逻辑
-它与同步模式不兼容：fast sync和轻客户端都运气不佳
-这只是延长了攻击的时间：垃圾依然可以在无尽的情况下稳步推进
-Parity的解决方案虽然不完美，但仍然可行。我想提出一个更长期的替代解决方案，涉及更多，但应该足够简单，以便能够在合理的时间内推出。
+As mentioned above, in a network with no value, Pow cannot work safely. Ethereum has a long-term PoS goal based on Casper, but this is a tedious study, so we can't rely on it to solve today's problems. However, a solution is easy to implement and is sufficiently efficient to properly repair the test network, the proof-of-authority scheme.
 
+Note that Parity does have a PoA implementation, although it looks more complicated than needed, there is not much protocol documentation, but it's hard to see it can be played with other customers. I welcome them to give me more feedback on this proposal based on their experience.
 
-## 标准化的PoA
-
-如上所述，在没有价值的网络中，Pow不能安全地工作。 以太坊有以Casper为基础的长期PoS目标，但是这是一个繁琐的研究，所以我们不能很快依靠这个来解决今天的问题。 然而，一种解决方案很容易实施，而且足够有效地正确地修复测试网络，即权威证明方案（proof-of-authority scheme）。
-
-注意，Parity确实有PoA的实现，虽然看起来比需要的更复杂，没有太多的协议文档，但是很难看到它可以和其他客户一起玩。 我欢迎他们基于他们的经验来给我的这个提案更多的反馈。
-
-这里描述的PoA协议的主要设计目标是实现和嵌入任何现有的以太坊客户端应该是非常简单的，同时允许使用现有的同步技术（快速，轻松，扭曲），而不需要客户端开发者添加 定制逻辑到关键软件。
+The main design goal of the PoA protocol described here is to implement and embed any existing Ethereum client should be very simple, while allowing the use of existing synchronization technologies (fast, easy, and distorted) without the need for client developers. Add custom logic to critical software.
 
 ## PoA101
 
-对于那些没有意识到PoA如何运作的人来说，这是一个非常简单的协议，而不是矿工们为了解决一个困难的问题而竞相争夺，授权签署者可以随时自行决定是否创建新的块。
+For those who don't realize how PoA works, this is a very simple agreement, rather than the miners competing to solve a difficult problem, and the signatory can decide whether to create a new block at any time.
 
-挑战围绕着如何控制挖矿频率，如何在不同的签名者之间分配负载（和机会）以及如何动态调整签名者列表。 下一节定义一个处理所有这些场景的建议协议。
+The challenge revolves around how to control the mining frequency, how to distribute the load (and opportunity) between different signers, and how to dynamically adjust the signer list. The next section defines a recommended protocol for handling all of these scenarios.
 
 ## Rinkeby proof-of-authority
 
-总体来说，有两种同步区块链的方法：
+In general, there are two ways to synchronize blockchains:
 
-- 传统的方法是把所有的事务一个接一个地进行起始块和紧缩。这种方式尝试过而且已经被证明在以太坊这种复杂的网络中非常耗费计算资源。
-另一种是只下载区块链头并验证它们的有效性，此后可以从网络上下载一个任意的最近的状态并检查最近的header。
-- PoA方案基于这样的想法，即块可能只能由可信签署人完成。 因此，客户端看到的每个块（或header）都可以与可信任的签名者列表进行匹配。 这里面临的挑战是如何维护一个可以及时更改的授权签名者列表？ 明显的答案（将其存储在以太坊合同中）也是错误的答案：在快速同步期间是无法访问状态的。
+- The traditional approach is to start all blocks and tighten the transactions one by one. This approach has been tried and has proven to be very computationally intensive in a complex network such as Ethereum. The other is to download only the blockchains and verify their validity, after which you can download an arbitrary recent state from the network and check the nearest header.
+- The PoA solution is based on the idea that blocks can only be completed by trusted signers. Therefore, each block (or header) seen by the client can match the list of trusted signers. The challenge here is how to maintain a list of authorized signers that can be changed in time? The obvious answer (stored in the Ethereum contract) is also the wrong answer: it is inaccessible during fast synchronization.
 
-**维护授权签名者列表的协议必须完全包含在块头中。**
+**The protocol that maintains the list of authorized signers must be fully contained in the block header.**
 
-下一个显而易见的想法是改变块标题的结构，这样就可以放弃PoW的概念，并引入新的字段来迎合投票机制。 这也是错误的答案：在多个实现中更改这样一个核心数据结构将是一个开发，维护和安全的噩梦。
+The next obvious idea is to change the structure of the block header so that you can abandon the concept of PoW and introduce new fields to cater to the voting mechanism. This is also the wrong answer: Changing such a core data structure in multiple implementations will be a nightmare for development, maintenance, and security.
 
-**维护授权签名者列表的协议必须完全适合当前的数据模型。**
+**The protocol that maintains the list of authorized signers must be fully adapted to the current data model.**
 
-所以，根据以上所述，我们不能使用EVM进行投票，而是不得不求助于区块头。 而且我们不能改变区块头字段，而不得不求助于当前可用的字段。 没有太多的选择。
+So, according to the above, we can't use the EVM to vote, but have to resort to the block header. And we can't change the block header field and have to resort to the currently available fields. There are not many choices.
 
-### 把区块头的一些其他字段用来实现投票和签名
+### Use some other fields of the block header to implement voting and signature
 
-当前仅用作有趣元数据的最明显的字段是块头中的32字节的ExtraData部分。 矿工们通常把他们的客户端和版本放在那里，但是有些人用另外的“信息”填充它们。 该协议将扩展此字段以增加65字节用来存放矿工的KEC签名。 这将允许任何获得一个区块的人员根据授权签名者的名单对其进行验证。 同时它也使得区块头中的矿工地址的字段作废。
+The most obvious field currently used only as interesting metadata is the 32-byte ExtraData portion of the block header. Miners usually put their clients and versions there, but some people fill them with additional "information." The protocol will extend this field to add 65 bytes to store the miner's KEC signature. This will allow anyone who gets a block to verify it based on the list of authorized signers. At the same time it also invalidates the field of the miner address in the block header.
 
-请注意，更改区块头的长度是非侵入性操作，因为所有代码（例如RLP编码，哈希）都不可知，所以客户端不需要定制逻辑。
+Note that changing the length of the block header is a non-intrusive operation because all code (such as RLP encoding, hashing) is agnostic, so the client does not need custom logic.
 
-以上就足以验证一个链，但我们如何更新一个动态的签名者列表。 答案是，我们可以重新使用新近过时的矿工字段beneficiary和PoA废弃的nonce字段来创建投票协议：
+The above is enough to verify a chain, but how do we update a dynamic list of signers. The answer is that we can re-use the newly obsolete miner field beneficiary and the PoA obsolete nonce field to create a voting protocol:
 
-- 在常规块中，这两个字段都将被设置为零。
-- 如果签名者希望对授权签名人列表进行更改，则会：
-	- 将矿工字段**beneficiary**设置为希望投票的签署者
-	- 将**nonce**设置为0或0xff ... f来投票赞成添加或踢出
+- In a regular block, both fields will be set to zero.
+- If the signer wishes to make changes to the list of authorized signers, it will:
+  - Set the miner field **beneficiary** to the signer who wishes to vote
+  - Set the **nonce** to 0 or 0xff ... f to vote for adding or kicking out
 
-任何同步链的客户端都可以在数据块处理过程中“统计”选票，并通过普通投票保持授权签名者的动态变化列表。 初始的一组签名者通过创世区块的参数提供（以避免在起始状态中部署“最初选民名单”合同的复杂性）。
+Clients of any synchronization chain can "count" votes during block processing and maintain a dynamic list of authorized signers by ordinary voting. The initial set of signers is provided by the parameters of the creation block (to avoid the complexity of deploying the "initial voter list" contract in the initial state).
 
-为了避免有一个无限的窗口来统计票数，并且允许定期清除陈旧的提议，我们可以重新使用ethash的概念 epoch，每个epoch 转换都会刷新所有未决的投票。 此外，这些epoch 转换还可以作为包含头部额外数据内的当前授权签名者列表的无状态检查点。 这允许客户端仅基于检查点散列进行同步，而不必重播在链上进行的所有投票。 它同样允许用包含了初始签名者的创世区块来完全定义区块链
+To avoid having an infinite window to count votes and to allow regular elimination of stale proposals, we can reuse ethash's concept epoch, and each epoch conversion will refresh all pending votes. In addition, these epoch conversions can also be used as stateless checkpoints that contain a list of currently authorized signers within the header's extra data. This allows the client to synchronize based only on the checkpoint hash without having to replay all the votes made on the chain. It also allows the complete definition of the blockchain with the creation block that contains the initial signer.
 
-### 攻击媒介：恶意签名者
+### Attack vector: malicious signer
 
-可能发生恶意用户被添加到签名者列表中，或者签名者密钥/机器受到威胁。 在这种情况下，协议需要能够抵御重组和垃圾邮件。 所提出的解决方案是，给定N个授权签名者的列表，任何签名者可能只在每个K中填充1个块。这确保损害是有限的，其余的矿工可以投出恶意用户。
+It may happen that a malicious user is added to the list of signers or the signer's key/machine is compromised. In this case, the agreement needs to be able to withstand restructuring and spam. The proposed solution is that given a list of N authorized signers, any signer may only fill 1 block per K. This ensures that damage is limited and the remaining miners can cast malicious users.
 
-## 攻击媒介：审查签名者
+## Attack vector: review signer
 
-另一个有趣的攻击媒介是如果一个签名者（或者一组签名者）试图检查出从授权列表中删除它们的块。 为了解决这个问题，我们限制了签名者允许的最小频率为N / 2。 这确保了恶意签名者需要控制至少51％的签名帐户，在这种情况下，游戏就是无论如何也无法进行下去了。
+Another interesting attack vector is if a signer (or a group of signers) tries to check out the blocks that removed them from the authorization list. To solve this problem, we limit the minimum frequency allowed by the signer to N / 2. This ensures that the malicious signer needs to control at least 51% of the signed account, in which case the game will not be able to proceed anyway.
 
-## 攻击媒介：垃圾邮件签名者
+## Attack vector: spammer signer
 
-最后的小型攻击媒介就是恶意签署者在每一个块内注入新的投票建议。 由于节点需要统计所有投票来创建授权签名者的实际列表，所以他们需要通过时间跟踪所有投票。 没有限制投票窗口，这可能会慢慢增长，但却是无限的。 解决方法是放置一个W块的移动窗口，之后投票被认为是陈旧的。 一个理智的窗户可能是1-2个时代。 我们将这称为一个时代。
+The final small attack vector is that malicious signers inject new voting suggestions into each block. Since the node needs to count all votes to create an actual list of authorized signers, they need to track all votes by time. There is no limit to the voting window, which may grow slowly, but it is unlimited. The solution is to place a W block's moving window, after which the vote is considered stale. A sensible window may be 1-2 times. We call this an epoch.
 
-## 攻击媒介：并发块
+## Attack vector: Concurrent blocks
 
-如果授权签名者的数量是N，并且我们允许每个签名者在K中填充1个块，那么在任何时间N-K个矿工都被允许为Mint。 为了避免这些争夺块，每个签名者将添加一个小的随机“抵消”，以释放一个新的块。 这确保了小叉子是罕见的，但偶尔还会发生（如在主网上）。 如果一个签名者被滥用权威而引起混乱，那么这个签名就可以被投票出去。
+If the number of authorized signers are N, and we allow each signer to mint 1 block out of K, then at any point in time N-K+1 miners are allowed to mint. To avoid these racing for blocks, every signer would add a small random "offset" to the time it releases a new block. This ensures that small forks are rare, but occasionally still happen (as on the main net). If a signer is caught abusing it's authority and causing chaos, it can be voted out.
 
-## 注意
+## Notes
 
-### 这是否表明建议我们使用一个被审查testnet？
+### Does this indicate that we recommend using a testnet that is being reviewed?
 
-该提议表明，考虑到某些行为者的恶意性质，并且鉴于“垄断资金”网络中PoW计划的弱点，最好是建立一个网络，使其具有一定的垃圾过滤功能，开发人员可以依靠它来测试其程序。
+The proposal suggests that, given the malicious nature of certain actors and the weaknesses of the PoW program in the “monopoly funds” network, it is best to establish a network with a certain garbage filtering function that developers can rely on to test Its program.
+Why regulate PoA?
+Different customers will be better in different situations. Go may be great in a server-side environment, but CPP may be better suited to run on RPI Zero.
+Is manual voting a lot of trouble?
+This is an implementation detail, but the signer can use the contract-based voting strategy to take advantage of the full power of the EVM and push only the results to the head of the average node for verification.
 
-为什么规范PoA？
+## Clarification and feedback
 
-不同的客户在不同的情况下会更好。 Go可能在服务器端环境中很棒，但CPP可能更适合在RPI Zero上运行。
+- This recommendation does not preclude the client from running a PoW-based test network, whether it is Ropsten or a new test network based on it. Ideally, customers offer a way to connect PoW and PoA-based test networks (#225 (comment)).
 
-手动投票是不是很麻烦？
+- Although the protocol parameters can be configured in the destruction of the client implementer, the Rinkeby network should be as close as possible to the primary network. This includes dynamic GasLimit, variable block time of around 15 seconds, GasPrice, etc. (#225 (comment)).
 
-这是一个实现细节，但是签名者可以利用基于合同的投票策略，利用EVM的全部功能，只将结果推送到平均节点的头部进行验证。
+- The program requires at least K signers to stay online, as this is the minimum number of people needed to ensure “minimize” diversity. This means that if K is exceeded, the network stops. This should be resolved by ensuring that the signer is a high-running machine, and that the failed machine is voted out in time (#225 (comment)) before too many failures occur.
 
-## 澄清和反馈
+- The proposal does not address the "legal" spam issue, just as an attacker effectively uses testnet to create garbage, but without PoW mining, an attacker may not be able to gain unlimited ether attacks. One possibility is to provide a way to get ether based on a GitHub (or any other way) account in a limited way (eg 10 times a day) (#225 (comment)).
 
-- 这个建议并不排除客户端运行基于PoW的测试网络，无论是Ropsten还是基于它的新的测试网络。理想的情况是客户提供一种连接PoW以及基于PoA的测试网络的方法（＃225（评论））。
+- It has been suggested to create a checkpoint block for each epoch that contains a list of authorized signers at the time. This will allow later light customers to say "synchronize from here" without having to start from the origin. This can be added to the extradata field (#225(comment)) as a prefix before signing.
 
-- 协议参数尽管可以在客户端实施者的破坏中进行配置，但Rinkeby网络应该尽可能地靠近主网络。这包括动态GasLimit，15秒左右的可变区块时间，GasPrice等（＃225（评论））。
+## Clique PoA Protocol (Clique proof-of-authority consensus protocol )
 
-- 该方案要求至少有K个签名者随时上网，因为这是确保“最小化”多样性所需的最少人数。这意味着如果超过K，则网络停止。这应该通过确保签名者是高运行时间的机器来解决，并且在发生太多故障之前及时地将失败的机器投票出去（＃225（评论））。
+We define the following constants:
 
-- 该提案并没有解决“合法的”垃圾邮件问题，就像在攻击者有效地使用testnet以创建垃圾一样，但是如果没有PoW挖掘，攻击者可能无法获得无限的ether来攻击。一种可能性是以有限的方式（例如每天10次）（＃225（评论）），以GitHub（或其他任何方式）帐户为基础提供一个获取ether的途径。
+- EPOCH_LENGTH：Checkpoints and reset the number of blocks for pending voting.
+  - Recommended 30000 to be similar to the ethhash epoch of the main network
+- BLOCK_PERIOD：The smallest difference between the timestamps of two consecutive blocks.
+  - Recommendation 15, to be similar to the ethhash epoch of the main network
+- EXTRA_VANITY：A fixed number of ExtraData prefix bytes are reserved for the signer vanity.
+  - The recommended 32 bytes are the same length as the current ExtraData.
+- EXTRA_SEAL：A fixed number of extra data suffix bytes reserved for the signer's stamp.
+  - The 65 bytes of the signature are saved, based on the standard secp256k1 curve.
+- NONCE_AUTH：Magic random number 0xffffffffffffffff vote to add a new signer.
+- NONCE_DROP：The magic random number 0x0000000000000000 votes to remove the signer.
+- UNCLE_HASH：Always Keccak256 (RLP([])) as Uncles has no meaning outside of PoW.
+- DIFF_NOTURN：If you don't have your signature yet, the difficulty of the block you signed is the difficulty.
+  - Recommendation 1, because it only needs to be an arbitrary baseline constant.
+- DIFF_INTURN：If your current turn is your signature, then the difficulty of your signature.
+  - Recommendation 2, which is more difficult than a signer who does not have a turn.
 
-- 有人建议为当时包含授权签名者列表的每个epoch创建checkpoint block。这将允许稍后的轻客户说“从这里同步”，而不需要从起源开始。这可以在签名之前作为前缀添加到extradata字段（＃225（comment））。
+We also define the following constants for each block:
 
+- BLOCK_NUMBER：The height of the block in the chain. The height of the creation block is 0.
+- SIGNER_COUNT：The number of authorized signers that are valid on a particular instance in the blockchain.
+- SIGNER_INDEX：The index in the sorted list of the current authorized signer.
+- SIGNER_LIMIT：Every so many blocks, the signer can only sign one. - There must be floor(SIGNER_COUNT / 2)+1 so many signers agree to reach a resolution.
 
-## Clique PoA 一致性协议 (Clique proof-of-authority consensus protocol )
-我们定义下面的常量：
+We re-adjust the purpose of the block header field as follows:
 
-- EPOCH_LENGTH：检查点并重置未决投票的块数。
-	- 建议30000，以便和主网络的ethhash epoch类似
-- BLOCK_PERIOD：两个连续块的时间戳之间的最小差异。
-	- 建议15，以便和主网络的ethhash epoch类似
-- EXTRA_VANITY：固定数量的ExtraData前缀字节为签名者vanity保留。
-	- 建议的32个字节以便和当前的ExtraData的长度相同。
-- EXTRA_SEAL：为签名者印章保留的固定数量的额外数据后缀字节。
-	- 保存签名的65个字节，基于标准secp256k1曲线。
-- NONCE_AUTH：魔术随机数字0xffffffffffffffff投票添加一个新的签名者。
-- NONCE_DROP：魔术随机数字0x0000000000000000对移除签名者进行投票。
-- UNCLE_HASH：始终Keccak256（RLP（[]））作为Uncles在PoW之外没有任何意义。
-- DIFF_NOTURN：如果当前没有轮到你签名，那么你签名的区块的难度就是这个难度。
-	- 建议1，因为它只需要是一个任意的基线常数。
-- DIFF_INTURN：如果当前轮到你签名，那么你签名的难度。
-	- 建议2， 这样就比没有轮到的签名者难度要高。
+- beneficiary：It is recommended to modify the address of the authorized signer list. - Zero should be filled normally, only when voting.
 
-我们还定义了以下每块的常量：
+  - Nonetheless, arbitrary values ​​(even meaningless values, such as throwing non-signers) are allowed to avoid adding extra complexity around the voting mechanism.
+  - The block must be padded with zeros at the checkpoint (ie epoch conversion).
 
-- BLOCK_NUMBER：链中的块高度，创世区块的高度是0。
-- SIGNER_COUNT：在区块链中中特定实例上有效的授权签名者的数量。
-- SIGNER_INDEX：当前授权签名者的排序列表中的索引。
-- SIGNER_LIMIT：每隔这么多块，签名者只能签署一块。
-	- 必须有floor(SIGNER_COUNT / 2）+1 这么多签名者同意才能达成某项决议。
-
-我们重新调整区块头字段的用途，如下所示：
-
-- beneficiary：建议修改授权签名人名单的地址。
-	- 应该正常填写零，只有投票时修改。
-	- 尽管如此，仍然允许任意值（甚至是无意义的值，例如投出非签名者），以避免增加围绕投票机制的额外复杂性。
-	- 必须在检查点（即epoch转换）块填充零。
-- nonce：Signer关于受益人字段中定义的账户的建议。
-	- NONCE_DROP 提议取消授权受益人作为现有签名者。
-	- NONCE_AUTH 提出授权受益人作为新的签名者。
-	- 必须在检查点块填充零。
-	- 除了上述两者（现在）之外，不得采用任何其他值。
-- extraData： vanity, checkpointing and signer signatures的组合字段。
-	- 第一个EXTRA_VANITY字节（固定长度）可以包含任意签名者vanity data。
-	- 最后一个EXTRA_SEAL字节（固定长度）是密封标题的签名者签名。
-	- 检查点块必须包含一个签名者列表（N * 20字节），否则省略。
-	- 检查点块附加数据部分中的签署者列表必须按升序排序。
-- mixHash：为了分叉保留。类似于Dao的额外数据
-	- 在正常操作期间必须填入零。
-- ommersHash：必须是UNCLE_HASH，因为在PoW之外，Uncles叔没有任何意义。
-- timestamp：必须至少为父区块的时间戳 + BLOCK_PERIOD。
-- difficulty：包含块的独立得分 来推导链的质量。 
-	- 如果BLOCK_NUMBER％SIGNER_COUNT！= SIGNER_INDEX，则必须为DIFF_NOTURN
-	- 如果BLOCK_NUMBER％SIGNER_COUNT == SIGNER_INDEX，则必须为DIFF_INTURN
-
+- nonce：Signer's suggestion about the account defined in the Beneficiary field.
+  - NONCE_DROP proposes to deauthorize the beneficiary as an existing signer.
+  - NONCE_AUTH proposes to authorize beneficiaries as new signers.
+  - The block must be filled with zeros at the checkpoint.
+  - No other value other than the above (now).
+- extraData： The combined field of vanity, checkpointing and signer signatures.
+  - The first EXTRA_VANITY byte (fixed length) can contain any signer vanity data.
+  - The last EXTRA_SEAL byte (fixed length) is the signer signature of the sealed title.
+  - The checkpoint block must contain a list of signers (N \* 20 bytes), otherwise omitted.
+  - The list of signers in the Additional Data section of the checkpoint block must be sorted in ascending order.
+- mixHash：Reserved for forks. Additional data similar to Dao
+  - Zero must be filled during normal operation.
+- ommersHash：Must be UNCLE_HASH, because Uncles has no meaning outside of PoW.
+- timestamp：Must be at least the timestamp of the parent block + BLOCK_PERIOD.
+- difficulty：Contains the independent score of the block to derive the quality of the chain.
+  - If BLOCK_NUMBER%SIGNER_COUNT! = SIGNER_INDEX, must be DIFF_NOTURN
+  - Must be DIFF_INTURN if BLOCK_NUMBER%SIGNER_COUNT == SIGNER_INDEX
 
 ### Authorizing a block
-为了给网络授权一个块，签名者需要签署包含除签名本身以外的所有内容。 这意味着哈希包含区块头的每个字段（包括nonce和mixDigest），还有除了65字节签名后缀外的extraData。 这些字段按照其在黄皮书中定义的顺序进行hash。
 
-该散列使用标准的secp256k1曲线进行签名，得到的65字节签名（R，S，V，其中V为0或1）作为尾随的65字节后缀嵌入到extraData中。
+In order to authorize a block for the network, the signer needs to sign everything that contains the signature itself. This means that the hash contains every field in the block header (including nonce and mixDigest), as well as extraData in addition to the 65-byte signature suffix. These fields are hashed in the order they are defined in the Yellow Book.
 
-为了确保恶意签名者（签名密钥丢失）不能在网络上受到破坏，每位签名者都可以在SIGNER_LIMIT连续块中签最多一个。 顺序不是固定的，不过（DIFF_INTURN）的签名者签出的区块难度要比（DIFF_NOTURN）高
+The hash is signed using the standard secp256k1 curve, and the resulting 65-byte signature (R, S, V, where V is 0 or 1) is embedded in the extraData as a trailing 65-byte suffix.
 
-#### 授权策略
+To ensure that a malicious signer (signature key loss) cannot be compromised on the network, each signer can sign up to one SIGNER_LIMIT contiguous block. The order is not fixed, but the signer of (DIFF_INTURN) is more difficult to check out than (DIFF_NOTURN)
 
-只要签名者符合上述规范，他们可以授权和分配他们认为合适的块， 下面的建议策略会减少网络流量和分叉，所以这是一个建议的功能：
+#### Authorization strategy
 
-- 如果签署者被允许签署一个区块（在授权清单上并且最近没有签署）。
-	- 计算下一个块的最佳签名时间（父+ BLOCK_PERIOD）。
-	- 如果轮到了，等待准确的时间到达，立即签字和播放。
-	- 如果没有轮到，则延迟 rand（SIGNER_COUNT * 500ms）这么久的时间签名。
-这个小小的策略将确保当前轮到的签名者（谁的块更重）对签名和传播与外转签名者有稍微的优势。 此外，该方案允许随着签名者数目的增加而具有一定规模。
+As long as the signer meets the above specifications, they can authorize and assign the blocks they think are appropriate. The following suggested strategies will reduce network traffic and forks, so this is a suggested feature:
 
-### 投票签署者
+- If the signer is allowed to sign a block (on the authorization list and has not recently signed).
+  - Calculate the best signature time for the next block (parent + BLOCK_PERIOD).
+  - If it is the turn, wait for the exact time to arrive, sign and play immediately.
+  - If there is no turn, delay rand (SIGNER_COUNT \* 500ms) for a long time signature. This small strategy will ensure that the current turn of the signer (who is heavier) has a slight advantage over signing and propagating and outbound signers. In addition, the scheme allows for a certain scale as the number of signers increases.
 
-每个epoch转换（包括创世区块）作为一个无状态的检查点，有能力的客户端应该能够同步而不需要任何以前的状态。 这意味着新epoch header不得包含投票，所有未落实的投票都将被丢弃，并从头开始计数。
+### Voting signer
 
-对于所有非epoch 转换块：
+Each epoch conversion (including the creation block) acts as a stateless checkpoint, and capable clients should be able to synchronize without any previous state. This means that the new epoch header must not contain votes, all uncommitted votes will be discarded and counted from the beginning.
 
-- 签名者可以使用自己签署的区块投一票，以提出对授权列表的更改。
-- 对每一个提案只保留最新的一个投票。
-- 随着链条的进展，投票也会生效（允许同时提交提案）。
-- 达成多数人意见的提案SIGNER_LIMIT立即生效。
-- 对于客户端实现的简单性，无效的提议不会受到惩罚。
+For all non-epoch conversion blocks:
 
+- The signer can vote for the block using his own signed block to make a change to the authorization list.
+- Only one latest vote is kept for each proposal.
+- As the chain progresses, the vote will also take effect (allowing the proposal to be submitted at the same time).
+- The proposal SIGNER_LIMIT, which reached the majority opinion, takes effect immediately.
+- Invalid proposals are not penalized for the simplicity of the client implementation.
 
-**生效的提案意味着放弃对该提案的所有未决投票（无论是赞成还是反对），并从一个清晰的名单开始。**
+**The proposal in force means giving up all pending votes on the proposal (whether in favor or against) and starting with a clear list.**
 
-### 级联投票
+### Cascade voting
 
-签名者取消授权期间可能会出现复杂的案例。如果先前授权的签署者被撤销，则批准提案所需的签名者数量可能会减少一个。这可能会导致一个或多个未决的提案达成共识，执行这些提案可能会进一步影响新的提案。
+Complex cases may occur during signer cancellation. If the previously authorized signer is revoked, the number of signers required to approve the proposal may be reduced by one. This may lead to a consensus on one or more pending proposals, which may further affect the new proposal.
 
-当多个相冲突的提议同时通过时（例如，添加新的签名者vs删除现有的提案者），处理这种情况并不明显，评估顺序可能会彻底改变最终授权列表的结果。由于签名者可能会在他们自己的每一个区块中反转他们自己的投票，所以哪一个提案将是“第一”并不那么明显。
+When multiple conflicting proposals are passed at the same time (for example, adding a new signer vs deleting an existing proposer), it is not obvious that the situation is evaluated, and the evaluation order may completely change the result of the final authorization list. Since the signer may reverse their own vote in each of their own blocks, it is not so obvious which proposal will be "first".
 
-为了避免级联执行所带来的缺陷，解决的办法是明确禁止级联效应。换句话说：只有当前标题/投票的受益人可以被添加到授权列表或从授权列表中删除。如果这导致其他建议达成共识，那么当他们各自的受益者再次“触发”时，这些建议将被执行（因为大多数人的共识仍然在这一点上）。
+In order to avoid the defects caused by cascading implementation, the solution is to explicitly prohibit the cascading effect. In other words: only the current title/voting beneficiary can be added to or removed from the authorization list. If this leads to consensus on other recommendations, then when their respective beneficiaries “trigger” again, these recommendations will be implemented (because most people's consensus is still at this point).
 
-### 投票策略
+### Voting strategy
 
-由于区块链可以有很小的reorgs，所以“cast-and-forget”的天真投票机制可能不是最优的，因为包含singleton投票的区块可能不会在最终的链中结束。
+Since the blockchain can have very small reorgs, the naïve voting mechanism of "cast-and-forget" may not be optimal, as blocks containing singleton votes may not end in the final chain.
 
-一个简单但工作的策略是允许用户在签名者上配置“提案”（例如“add 0x ...”，“drop 0x ...”）。 签署的代码，然后可以选择一个随机的建议，每块它签署和注入。 这确保了多个并发提案以及reorgs最终在链上被注意到。
+A simple but working strategy is to allow users to configure "proposals" on the signer (eg "add 0x ...", "drop 0x ..."). Sign the code and then you can choose a random recommendation for each block it signs and injects. This ensures that multiple concurrent proposals and reorgs are ultimately noticed on the chain.
 
-这个列表可能在一定数量的块/epoch后过期，但重要的是要认识到“看”一个提案通过并不意味着它不会被重新组合，所以当提案通过时不应该立即放弃。
-
-
+This list may expire after a certain number of blocks/epoch, but it is important to realize that "seeing" a proposal does not mean that it will not be reassembled, so it should not be abandoned immediately when the proposal passes.
