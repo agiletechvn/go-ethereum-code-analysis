@@ -655,185 +655,185 @@ func (d *Downloader) fetchBodies(from uint64) error {
 fetchParts
 
 ```go
-    // fetchParts iteratively downloads scheduled block parts, taking any available
-    // peers, reserving a chunk of fetch requests for each, waiting for delivery and
-    // also periodically checking for timeouts.
-    // As the scheduling/timeout logic mostly is the same for all downloaded data
-    // types, this method is used by each for data gathering and is instrumented with
-    // various callbacks to handle the slight differences between processing them.
-    // The instrumentation parameters:
-    //  - errCancel:   error type to return if the fetch operation is cancelled (mostly makes logging nicer)
-    //  - deliveryCh:  channel from which to retrieve downloaded data packets (merged from all concurrent peers)
-    //  - deliver:     processing callback to deliver data packets into type specific download queues (usually within `queue`)
-    //  - wakeCh:      notification channel for waking the fetcher when new tasks are available (or sync completed) use to notify fetcher of new task
-    //  - expire:      task callback method to abort requests that took too long and return the faulty peers (traffic shaping)
-    //  - pending:     task callback for the number of requests still needing download (detect completion/non-completability)
-    //  - inFlight:    task callback for the number of in-progress requests (wait for all active downloads to finish)
-    //  - throttle:    task callback to check if the processing queue is full and activate throttling (bound memory use)
-    //  - reserve:     task callback to reserve new download tasks to a particular peer (also signals partial completions)
-    //  - fetchHook:   tester callback to notify of new tasks being initiated (allows testing the scheduling logic)
-    //  - fetch:       network callback to actually send a particular download request to a physical remote peer
-    //  - cancel:      task callback to abort an in-flight download request and allow rescheduling it (in case of lost peer)
-    //  - capacity:    network callback to retrieve the estimated type-specific bandwidth capacity of a peer (traffic shaping)
-    //  - idle:        network callback to retrieve the currently (type specific) idle peers that can be assigned tasks
-    //  - setIdle:     network callback to set a peer back to idle and update its estimated capacity (traffic shaping)
-    //  - kind:        textual label of the type being downloaded to display in log mesages
-    func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliver func(dataPack) (int, error), wakeCh chan bool,
-    	expire func() map[string]int, pending func() int, inFlight func() bool, throttle func() bool, reserve func(*peerConnection, int) (*fetchRequest, bool, error),
-    	fetchHook func([]*types.Header), fetch func(*peerConnection, *fetchRequest) error, cancel func(*fetchRequest), capacity func(*peerConnection) int,
-    	idle func() ([]*peerConnection, int), setIdle func(*peerConnection, int), kind string) error {
+// fetchParts iteratively downloads scheduled block parts, taking any available
+// peers, reserving a chunk of fetch requests for each, waiting for delivery and
+// also periodically checking for timeouts.
+// As the scheduling/timeout logic mostly is the same for all downloaded data
+// types, this method is used by each for data gathering and is instrumented with
+// various callbacks to handle the slight differences between processing them.
+// The instrumentation parameters:
+//  - errCancel:   error type to return if the fetch operation is cancelled (mostly makes logging nicer)
+//  - deliveryCh:  channel from which to retrieve downloaded data packets (merged from all concurrent peers)
+//  - deliver:     processing callback to deliver data packets into type specific download queues (usually within `queue`)
+//  - wakeCh:      notification channel for waking the fetcher when new tasks are available (or sync completed) use to notify fetcher of new task
+//  - expire:      task callback method to abort requests that took too long and return the faulty peers (traffic shaping)
+//  - pending:     task callback for the number of requests still needing download (detect completion/non-completability)
+//  - inFlight:    task callback for the number of in-progress requests (wait for all active downloads to finish)
+//  - throttle:    task callback to check if the processing queue is full and activate throttling (bound memory use)
+//  - reserve:     task callback to reserve new download tasks to a particular peer (also signals partial completions)
+//  - fetchHook:   tester callback to notify of new tasks being initiated (allows testing the scheduling logic)
+//  - fetch:       network callback to actually send a particular download request to a physical remote peer
+//  - cancel:      task callback to abort an in-flight download request and allow rescheduling it (in case of lost peer)
+//  - capacity:    network callback to retrieve the estimated type-specific bandwidth capacity of a peer (traffic shaping)
+//  - idle:        network callback to retrieve the currently (type specific) idle peers that can be assigned tasks
+//  - setIdle:     network callback to set a peer back to idle and update its estimated capacity (traffic shaping)
+//  - kind:        textual label of the type being downloaded to display in log mesages
+func (d *Downloader) fetchParts(errCancel error, deliveryCh chan dataPack, deliver func(dataPack) (int, error), wakeCh chan bool,
+	expire func() map[string]int, pending func() int, inFlight func() bool, throttle func() bool, reserve func(*peerConnection, int) (*fetchRequest, bool, error),
+	fetchHook func([]*types.Header), fetch func(*peerConnection, *fetchRequest) error, cancel func(*fetchRequest), capacity func(*peerConnection) int,
+	idle func() ([]*peerConnection, int), setIdle func(*peerConnection, int), kind string) error {
 
-    	// Create a ticker to detect expired retrieval tasks
-    	ticker := time.NewTicker(100 * time.Millisecond)
-    	defer ticker.Stop()
+	// Create a ticker to detect expired retrieval tasks
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
 
-    	update := make(chan struct{}, 1)
+	update := make(chan struct{}, 1)
 
-    	// Prepare the queue and fetch block parts until the block header fetcher's done
-    	finished := false
-    	for {
-    		select {
-    		case <-d.cancelCh:
-    			return errCancel
+	// Prepare the queue and fetch block parts until the block header fetcher's done
+	finished := false
+	for {
+		select {
+		case <-d.cancelCh:
+			return errCancel
 
-    		case packet := <-deliveryCh:
-    			// If the peer was previously banned and failed to deliver it's pack
-    			// in a reasonable time frame, ignore it's message.
-    			if peer := d.peers.Peer(packet.PeerId()); peer != nil {
-    				// Deliver the received chunk of data and check chain validity
-    				accepted, err := deliver(packet)
-    				if err == errInvalidChain {
-    					return err
-    				}
-    				// Unless a peer delivered something completely else than requested (usually
-    				// caused by a timed out request which came through in the end), set it to
-    				// idle. If the delivery's stale, the peer should have already been idled.
-    				if err != errStaleDelivery {
-    					setIdle(peer, accepted)
-    				}
-    				// Issue a log to the user to see what's going on
-    				switch {
-    				case err == nil && packet.Items() == 0:
-    					peer.log.Trace("Requested data not delivered", "type", kind)
-    				case err == nil:
-    					peer.log.Trace("Delivered new batch of data", "type", kind, "count", packet.Stats())
-    				default:
-    					peer.log.Trace("Failed to deliver retrieved data", "type", kind, "err", err)
-    				}
-    			}
-    			// Blocks assembled, try to update the progress
-    			select {
-    			case update <- struct{}{}:
-    			default:
-    			}
+		case packet := <-deliveryCh:
+			// If the peer was previously banned and failed to deliver it's pack
+			// in a reasonable time frame, ignore it's message.
+			if peer := d.peers.Peer(packet.PeerId()); peer != nil {
+				// Deliver the received chunk of data and check chain validity
+				accepted, err := deliver(packet)
+				if err == errInvalidChain {
+					return err
+				}
+				// Unless a peer delivered something completely else than requested (usually
+				// caused by a timed out request which came through in the end), set it to
+				// idle. If the delivery's stale, the peer should have already been idled.
+				if err != errStaleDelivery {
+					setIdle(peer, accepted)
+				}
+				// Issue a log to the user to see what's going on
+				switch {
+				case err == nil && packet.Items() == 0:
+					peer.log.Trace("Requested data not delivered", "type", kind)
+				case err == nil:
+					peer.log.Trace("Delivered new batch of data", "type", kind, "count", packet.Stats())
+				default:
+					peer.log.Trace("Failed to deliver retrieved data", "type", kind, "err", err)
+				}
+			}
+			// Blocks assembled, try to update the progress
+			select {
+			case update <- struct{}{}:
+			default:
+			}
 
-    		case cont := <-wakeCh:
-    			// The header fetcher sent a continuation flag, check if it's done
-    			if !cont {
-    				finished = true
-    			}
-    			// Headers arrive, try to update the progress
-    			select {
-    			case update <- struct{}{}:
-    			default:
-    			}
+		case cont := <-wakeCh:
+			// The header fetcher sent a continuation flag, check if it's done
+			if !cont {
+				finished = true
+			}
+			// Headers arrive, try to update the progress
+			select {
+			case update <- struct{}{}:
+			default:
+			}
 
-    		case <-ticker.C:
-    			// Sanity check update the progress
-    			select {
-    			case update <- struct{}{}:
-    			default:
-    			}
+		case <-ticker.C:
+			// Sanity check update the progress
+			select {
+			case update <- struct{}{}:
+			default:
+			}
 
-    		case <-update:
-    			// Short circuit if we lost all our peers
-    			if d.peers.Len() == 0 {
-    				return errNoPeers
-    			}
-    			// Check for fetch request timeouts and demote the responsible peers
-    			for pid, fails := range expire() {
-    				if peer := d.peers.Peer(pid); peer != nil {
-    					// If a lot of retrieval elements expired, we might have overestimated the remote peer or perhaps
-    					// ourselves. Only reset to minimal throughput but don't drop just yet. If even the minimal times
-    					// out that sync wise we need to get rid of the peer.
+		case <-update:
+			// Short circuit if we lost all our peers
+			if d.peers.Len() == 0 {
+				return errNoPeers
+			}
+			// Check for fetch request timeouts and demote the responsible peers
+			for pid, fails := range expire() {
+				if peer := d.peers.Peer(pid); peer != nil {
+					// If a lot of retrieval elements expired, we might have overestimated the remote peer or perhaps
+					// ourselves. Only reset to minimal throughput but don't drop just yet. If even the minimal times
+					// out that sync wise we need to get rid of the peer.
 
-    					// The reason the minimum threshold is 2 is because the downloader tries to estimate the bandwidth
-    					// and latency of a peer separately, which requires pushing the measures capacity a bit and seeing
-    					// how response times reacts, to it always requests one more than the minimum (i.e. min 2).
+					// The reason the minimum threshold is 2 is because the downloader tries to estimate the bandwidth
+					// and latency of a peer separately, which requires pushing the measures capacity a bit and seeing
+					// how response times reacts, to it always requests one more than the minimum (i.e. min 2).
 
-    					if fails > 2 {
-    						peer.log.Trace("Data delivery timed out", "type", kind)
-    						setIdle(peer, 0)
-    					} else {
-    						peer.log.Debug("Stalling delivery, dropping", "type", kind)
-    						d.dropPeer(pid)
-    					}
-    				}
-    			}
-    			// If there's nothing more to fetch, wait or terminate
-    			if pending() == 0 { // no task
-    				if !inFlight() && finished {
-    					log.Debug("Data fetching completed", "type", kind)
-    					return nil
-    				}
-    				break
-    			}
-    			// Send a download request to all idle peers, until throttled
-    			progressed, throttled, running := false, false, inFlight()
-    			idles, total := idle()
+					if fails > 2 {
+						peer.log.Trace("Data delivery timed out", "type", kind)
+						setIdle(peer, 0)
+					} else {
+						peer.log.Debug("Stalling delivery, dropping", "type", kind)
+						d.dropPeer(pid)
+					}
+				}
+			}
+			// If there's nothing more to fetch, wait or terminate
+			if pending() == 0 { // no task
+				if !inFlight() && finished {
+					log.Debug("Data fetching completed", "type", kind)
+					return nil
+				}
+				break
+			}
+			// Send a download request to all idle peers, until throttled
+			progressed, throttled, running := false, false, inFlight()
+			idles, total := idle()
 
-    			for _, peer := range idles {
-    				// Short circuit if throttling activated
-    				if throttle() {
-    					throttled = true
-    					break
-    				}
-    				// Short circuit if there is no more available task.
-    				if pending() == 0 {
-    					break
-    				}
-    				// Reserve a chunk of fetches for a peer. A nil can mean either that
-    				// no more headers are available, or that the peer is known not to
-    				// have them.
-    				request, progress, err := reserve(peer, capacity(peer))
-    				if err != nil {
-    					return err
-    				}
-    				if progress {
-    					progressed = true
-    				}
-    				if request == nil {
-    					continue
-    				}
-    				if request.From > 0 {
-    					peer.log.Trace("Requesting new batch of data", "type", kind, "from", request.From)
-    				} else if len(request.Headers) > 0 {
-    					peer.log.Trace("Requesting new batch of data", "type", kind, "count", len(request.Headers), "from", request.Headers[0].Number)
-    				} else {
-    					peer.log.Trace("Requesting new batch of data", "type", kind, "count", len(request.Hashes))
-    				}
-    				// Fetch the chunk and make sure any errors return the hashes to the queue
-    				if fetchHook != nil {
-    					fetchHook(request.Headers)
-    				}
-    				if err := fetch(peer, request); err != nil {
-    					// Although we could try and make an attempt to fix this, this error really
-    					// means that we've double allocated a fetch task to a peer. If that is the
-    					// case, the internal state of the downloader and the queue is very wrong so
-    					// better hard crash and note the error instead of silently accumulating into
-    					// a much bigger issue.
-    					panic(fmt.Sprintf("%v: %s fetch assignment failed", peer, kind))
-    				}
-    				running = true
-    			}
-    			// Make sure that we have peers available for fetching. If all peers have been tried
-    			// and all failed throw an error
-    			if !progressed && !throttled && !running && len(idles) == total && pending() > 0 {
-    				return errPeersUnavailable
-    			}
-    		}
-    	}
-    }
+			for _, peer := range idles {
+				// Short circuit if throttling activated
+				if throttle() {
+					throttled = true
+					break
+				}
+				// Short circuit if there is no more available task.
+				if pending() == 0 {
+					break
+				}
+				// Reserve a chunk of fetches for a peer. A nil can mean either that
+				// no more headers are available, or that the peer is known not to
+				// have them.
+				request, progress, err := reserve(peer, capacity(peer))
+				if err != nil {
+					return err
+				}
+				if progress {
+					progressed = true
+				}
+				if request == nil {
+					continue
+				}
+				if request.From > 0 {
+					peer.log.Trace("Requesting new batch of data", "type", kind, "from", request.From)
+				} else if len(request.Headers) > 0 {
+					peer.log.Trace("Requesting new batch of data", "type", kind, "count", len(request.Headers), "from", request.Headers[0].Number)
+				} else {
+					peer.log.Trace("Requesting new batch of data", "type", kind, "count", len(request.Hashes))
+				}
+				// Fetch the chunk and make sure any errors return the hashes to the queue
+				if fetchHook != nil {
+					fetchHook(request.Headers)
+				}
+				if err := fetch(peer, request); err != nil {
+					// Although we could try and make an attempt to fix this, this error really
+					// means that we've double allocated a fetch task to a peer. If that is the
+					// case, the internal state of the downloader and the queue is very wrong so
+					// better hard crash and note the error instead of silently accumulating into
+					// a much bigger issue.
+					panic(fmt.Sprintf("%v: %s fetch assignment failed", peer, kind))
+				}
+				running = true
+			}
+			// Make sure that we have peers available for fetching. If all peers have been tried
+			// and all failed throw an error
+			if !progressed && !throttled && !running && len(idles) == total && pending() > 0 {
+				return errPeersUnavailable
+			}
+		}
+	}
+}
 ```
 
 ## receipt processing
@@ -869,44 +869,44 @@ func (d *Downloader) fetchReceipts(from uint64) error {
 ## processFastSyncContent and processFullSyncContent
 
 ```go
-    // processFastSyncContent takes fetch results from the queue and writes them to the
-    // database. It also controls the synchronisation of state nodes of the pivot block.
-    func (d *Downloader) processFastSyncContent(latest *types.Header) error {
-    	// Start syncing state of the reported head block.
-    	// This should get us most of the state of the pivot block.
-    	stateSync := d.syncState(latest.Root)
-    	defer stateSync.Cancel()
-    	go func() {
-    		if err := stateSync.Wait(); err != nil {
-    			d.queue.Close() // wake up WaitResults
-    		}
-    	}()
+// processFastSyncContent takes fetch results from the queue and writes them to the
+// database. It also controls the synchronisation of state nodes of the pivot block.
+func (d *Downloader) processFastSyncContent(latest *types.Header) error {
+	// Start syncing state of the reported head block.
+	// This should get us most of the state of the pivot block.
+	stateSync := d.syncState(latest.Root)
+	defer stateSync.Cancel()
+	go func() {
+		if err := stateSync.Wait(); err != nil {
+			d.queue.Close() // wake up WaitResults
+		}
+	}()
 
-    	pivot := d.queue.FastSyncPivot()
-    	for {
-    		results := d.queue.WaitResults() // waiting for queue output
-    		if len(results) == 0 {
-    			return stateSync.Cancel()
-    		}
-    		if d.chainInsertHook != nil {
-    			d.chainInsertHook(results)
-    		}
-    		P, beforeP, afterP := splitAroundPivot(pivot, results)
-    		if err := d.commitFastSyncData(beforeP, stateSync); err != nil {
-    			return err
-    		}
-    		if P != nil {
-    			stateSync.Cancel()
-    			if err := d.commitPivotBlock(P); err != nil {
-    				return err
-    			}
-    		}
-    		// For all nodes after the pivot point, you need to follow the full processing.
-    		if err := d.importBlockResults(afterP); err != nil {
-    			return err
-    		}
-    	}
-    }
+	pivot := d.queue.FastSyncPivot()
+	for {
+		results := d.queue.WaitResults() // waiting for queue output
+		if len(results) == 0 {
+			return stateSync.Cancel()
+		}
+		if d.chainInsertHook != nil {
+			d.chainInsertHook(results)
+		}
+		P, beforeP, afterP := splitAroundPivot(pivot, results)
+		if err := d.commitFastSyncData(beforeP, stateSync); err != nil {
+			return err
+		}
+		if P != nil {
+			stateSync.Cancel()
+			if err := d.commitPivotBlock(P); err != nil {
+				return err
+			}
+		}
+		// For all nodes after the pivot point, you need to follow the full processing.
+		if err := d.importBlockResults(afterP); err != nil {
+			return err
+		}
+	}
+}
 ```
 
 processFullSyncContent, relatively simple. Get the block from the queue and insert it.

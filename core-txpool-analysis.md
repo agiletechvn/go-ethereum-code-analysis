@@ -1,4 +1,4 @@
-Txpool is mainly used to store the currently committed transactions waiting to be written to the block, both remote and local.
+Txpool is mainly used to store the currently committed transactions waiting to be written to the block, both remote and local. Txlist is more on the heap structure.
 
 There are two types of transactions in txpool.
 
