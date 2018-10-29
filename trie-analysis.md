@@ -1,28 +1,29 @@
 The package trie implements Merkle Patricia Tries, which is referred to herein as MPT as a data structure. This data structure is actually a Trie tree variant. MPT is a very important data structure in Ethereum for storing user accounts. Status and its changes, transaction information, and receipt information for the transaction. MPT is actually a combination of three data structures: Trie, Patricia Trie, and Merkle. The three data structures are described separately below.
 
-## Trie树 (引用介绍 http://dongxicheng.org/structure/trietree/)
-Trie树，又称字典树，单词查找树或者前缀树，是一种用于快速检索的多叉树结构，如英文字母的字典树是一个26叉树，数字的字典树是一个10叉树。
+## Trie tree (![introduction](trie-structure.md))
+The Trie tree, also known as the dictionary tree, word search tree or prefix tree, is a multi-fork tree structure for fast retrieval. For example, the dictionary tree of English letters is a 26-fork tree, and the digital dictionary tree is a 10-fork tree.  
 
-Trie树可以利用字符串的公共前缀来节约存储空间。如下图所示，该trie树用10个节点保存了6个字符串：tea，ten，to，in，inn，int：
+
+Trie trees can take advantage of the common prefix of strings to save storage space. As shown in the following figure, the trie tree saves 6 strings with 10 nodes: tea, ten, to, in, inn, int:
 
 ![image](picture/trie_1.jpg)
 
-在该trie树中，字符串in，inn和int的公共前缀是“in”，因此可以只存储一份“in”以节省空间。当然，如果系统中存在大量字符串且这些字符串基本没有公共前缀，则相应的trie树将非常消耗内存，这也是trie树的一个缺点。
+In the trie tree, the common prefix for the strings in, inn, and int is "in", so you can store only one copy of "in" to save space. Of course, if there are a large number of strings in the system and these strings have no common prefix, the corresponding trie tree will consume a lot of memory, which is also a disadvantage of the trie tree.
 
-Trie树的基本性质可以归纳为：
+The basic properties of the Trie tree can be summarized as:  
 
-- 根节点不包含字符，除根节点以外每个节点只包含一个字符。
-- 从根节点到某一个节点，路径上经过的字符连接起来，为该节点对应的字符串。
-- 每个节点的所有子节点包含的字符串不相同。
+- The root node does not contain characters, and each node contains only one character except the root node.  
+- From the root node to a node, the characters passing through the path are connected, which is the string corresponding to the node.  
+- All children of each node contain different strings.  
 
-## Patricia Tries (前缀树)
-前缀树跟Trie树的不同之处在于Trie树给每一个字符串分配一个节点，这样将使那些很长但又没有公共节点的字符串的Trie树退化成数组。在以太坊里面会由黑客构造很多这种节点造成拒绝服务攻击。前缀树的不同之处在于如果节点公共前缀，那么就使用公共前缀，否则就把剩下的所有节点插入同一个节点。Patricia相对Tire的优化正如下图：
+## Patricia Tries (prefix tree)  
+The difference between a prefix tree and a Trie tree is that the Trie tree assigns a node to each string, which degenerates the Trie tree of strings that are long but have no public nodes into an array. In Ethereum, many such nodes are constructed by hackers to cause denial of service attacks. The difference between prefix trees is that if the nodes have a common prefix, then the common prefix is ​​used, otherwise all the remaining nodes are inserted into the same node. The optimization of Patricia relative to Tire is as follows:
 
 ![Optimization of Tire to Patricia](picture/patricia_tire.png)
 
 ![image](picture/trie_2.png)
 
-上图存储的8个Key Value对，可以看到前缀树的特点。
+The eight Key Value pairs stored in the above figure can see the characteristics of the prefix tree.
 
 | Key              | value |
 | ---------------- | ----: |
@@ -35,908 +36,966 @@ Trie树的基本性质可以归纳为：
 | 6c0a8f740d16y03G | 43    |
 | 6c0a8f740d16vcc1 | 48    |
 
-## Merkle树 (参考 http://blog.csdn.net/wo541075754/article/details/54632929）
-Merkle Tree，通常也被称作Hash Tree，顾名思义，就是存储hash值的一棵树。Merkle树的叶子是数据块(例如，文件或者文件的集合)的hash值。非叶节点是其对应子节点串联字符串的hash。
+## Merkle tree   
+Merkle Tree, also commonly referred to as Hash Tree, as the name suggests, is a tree that stores hash values. The leaves of a Merkle tree are the hash values ​​of data blocks (for example, a directory or files). A non-leaf node is a hash of its corresponding child node concatenated string.
+
 
 ![image](picture/trie_3.png)
 
-Merkle Tree的主要作用是当我拿到Top Hash的时候，这个hash值代表了整颗树的信息摘要，当树里面任何一个数据发生了变动，都会导致Top Hash的值发生变化。 而Top Hash的值是会存储到区块链的区块头里面去的， 区块头是必须经过工作量证明。 这也就是说我只要拿到一个区块头，就可以对区块信息进行验证。 更加详细的信息请参考那个博客。有详细的介绍。
+The main function of Merkle Tree is that when I get Top Hash, this hash value represents the information summary of the whole tree. When any data in the tree changes, the value of Top Hash will change. The value of Top Hash is stored in the block header of the blockchain. The block header must be certified by the workload. This means that I can verify the block information as long as I get a block header. Please refer to that blog for more detailed information. There is a detailed introduction.
 
 
-## 以太坊的MPT
-每一个以太坊的区块头包含三颗MPT树，分别是
 
-- 交易树
-- 收据树(交易执行过程中的一些数据)
-- 状态树(账号信息， 合约账户和用户账户)
 
-下图中是两个区块头，其中state root，tx root receipt root分别存储了这三棵树的树根，第二个区块显示了当账号 175的数据变更(27 -> 45)的时候，只需要存储跟这个账号相关的部分数据，而且老的区块中的数据还是可以正常访问。(这个有点类似与函数式编程语言中的不可变的数据结构的实现)
+## Ethereum MPT  
+Each block of Ethereum contains three MPT trees, respectively
+
+- Trading tree
+- Receipt tree (some data during the execution of the transaction)
+- Status tree (account information, contract account and user account)
+
+In the figure below are two block headers, where state root, tx root receipt root stores the roots of the three trees, and the second block shows when the data of account 175 changes (27 -> 45). Only need to store some of the data related to this account, and the data in the old block can still be accessed normally. (This is somewhat similar to the implementation of an immutable data structure in a functional programming language.) The detailed structure is  
 ![image](picture/trie_4.png)
-详细结构为
+Detailed structure is  
 ![world state trie](picture/worldstatetrie.png)
 
-## 黄皮书形式化定义(Appendix D. Modified Merkle Patricia Tree)
+## Yellow Book(Appendix D. Modified Merkle Patricia Tree)
 
-正式地，我们假设输入值J，包含Key Value对的集合（Key Value都是字节数组）：
+Formally, we assume that the input value J contains a collection of Key Value pairs (Key Value is a byte array):  
 ![image](picture/trie_5.png)
 
-当处理这样一个集合的时候，我们使用下面的这样标识表示数据的 Key和Value(对于J集合中的任意一个I， I0表示Key， I1表示Value)
+When dealing with such a collection, we use the following identifiers to represent the Key and Value of the data (for any I in the J set, I0 represents Key and I1 represents Value)  
 
 ![image](picture/trie_6.png)
 
-对于任何特定的字节，我们可以表示为对应的半字节（nibble），其中Y集合在Hex-Prefix Encoding中有说明，意为半字节（4bit）集合（之所以采用半字节，其与后续说明的分支节点branch node结构以及key中编码flag有关）
+For any particular byte, we can represent it as the corresponding nibble (nibble), where the Y set is specified in Hex-Prefix Encoding, meaning a nibble (4bit) set (the reason for using nibbles, Corresponding to the branch node structure of the branch node and the encoding flag in the key)  
 
 ![image](picture/trie_7.png)
 
-我们定义了TRIE函数，用来表示树根的HASH值（其中c函数的第二个参数，意为构建完成后树的层数。root的值为0）
+We define the TRIE function to represent the HASH value of the root of the tree (where the second parameter of the c function is the number of layers of the tree after the build is completed. The value of root is 0)  
 
 ![image](picture/trie_8.png)
 
-我们还定义一个函数n，这个trie的节点函数。 当组成节点时，我们使用RLP对结构进行编码。 作为降低存储复杂度的手段，对于RLP少于32字节的节点，我们直接存储其RLP值， 对于那些较大的，我们存储其HASH节点。
-我们用c来定义节点组成函数：
+We also define a function n, the node function of this trie. When composing nodes, we use RLP to encode the structure. As a means of reducing storage complexity, for nodes with RLP less than 32 bytes, we store their RLP values ​​directly, and for those larger, we store their HASH nodes. We use c to define the node composition function:  
 
 ![image](picture/trie_9.png)
 
-以类似于基数树的方式，当Trie树从根遍历到叶时，可以构建单个键值对。 Key通过遍历累积，从每个分支节点获取单个半字节（与基数树一样）。 与基数树不同，在共享相同前缀的多个Key的情况下，或者在具有唯一后缀的单个Key的情况下，提供两个优化节点。的情况下，或者在具有唯一后缀的单个密钥的情况下，提供两个优化节点。 因此，当遍历时，可能从其他两个节点类型，扩展和叶中的每一个潜在地获取多个半字节。在Trie树中有三种节点：
+In a manner similar to a radix tree, a single key-value pair can be constructed when the Trie tree traverses from root to leaf. Key acquires a single nibble from each branch node (like the radix tree) by traversal accumulation. Unlike a radix tree, in the case of multiple Keys sharing the same prefix, or in the case of a single Key with a unique suffix, two optimization nodes are provided. In the case of a single key with a unique suffix, two optimization nodes are provided. Therefore, when traversing, it is possible to potentially acquire multiple nibbles from each of the other two node types, extensions, and leaves. There are three types of nodes in the Trie tree:  
 
-- **叶子节点(Leaf):** 叶子节点包含两个字段， 第一个字段是剩下的Key的半字节编码,而且半字节编码方法的第二个参数为true， 第二个字段是Value
-- **扩展节点(Extention):** 扩展节点也包含两个字段， 第一个字段是剩下的Key的可以至少被两个剩下节点共享的部分的半字节编码，第二个字段是n(J,j)
-- **分支节点(Branch):** 分支节点包含了17个字段，其前16个项目对应于这些点在其遍历中的键的十六个可能的半字节值中的每一个。第17个字段是存储那些在当前结点结束了的节点(例如， 有三个key,分别是 (abc ,abd, ab) 第17个字段储存了ab节点的值)
+- **(Leaf):** The leaf node contains two fields. The first field is the nibble encoding of the remaining Key, and the second parameter of the nibble encoding method is true. The second field is Value.  
+- **(Extention):** The extension node also contains two fields. The first field is the nibble code of the part of the remaining Key that can be shared by at least two remaining nodes. The second field is n(J, j)  
+- **(Branch):** branch node contains 17 fields whose first 16 items correspond to each of the sixteen possible nibble values ​​of the keys in which they are traversed. The 17th field stores the nodes that have ended at the current node (for example, there are three keys, respectively (abc, abd, ab). The 17th field stores the value of the ab node)  
 
-分支节点只有在需要的时候使用， 对于一个只有一个非空 key value对的Trie树，可能不存在分支节点。 如果使用公式来定义这三种节点， 那么公式如下：
-图中的HP函数代表Hex-Prefix Encoding，是一种半字节编码格式，RLP是使用RLP进行序列化的函数。
+Branch nodes are only used when needed. For a Trie tree with only one non-null key value pair, there may be no branch nodes. If you use a formula to define these three nodes, the formula is as follows: The HP function in the figure represents Hex-Prefix Encoding, which is a nibble encoding format, and RLP is a function that uses RLP for serialization.  
 
 ![image](picture/trie_10.png)
 
-对于上图的三种情况的解释
+Explanation of the three cases in the above figure
 
-- 如果当前需要编码的KV集合只剩下一条数据，那么这条数据按照第一条规则进行编码。
-- 如果当前需要编码的KV集合有公共前缀，那么提取最大公共前缀并使用第二条规则进行处理。
-- 如果不是上面两种情况，那么使用分支节点进行集合切分，因为key是使用HP进行编码的，所以可能的分支只有0-15这16个分支。可以看到u的值由n进行递归定义，而如果有节点刚好在这里完结了，那么第17个元素v就是为这种情况准备的。
+- If there is only one piece of data left in the KV set that needs to be encoded, then the data is encoded according to the first rule.
+- If the currently required KV set has a common prefix, then the largest common prefix is ​​extracted and processed using the second rule.
+- If it is not the above two cases, then use the branch node for set splitting, because the key is encoded using HP, so the possible branch is only 16 branches of 0-15. It can be seen that the value of u is recursively defined by n, and if a node is just finished here, then the 17th element v is prepared for this case.
 
-对于数据应该如何存储和不应该如何存储， 黄皮书中说明没有显示的定义。所以这是一个实现上的问题。我们简单的定义了一个函数来把J映射为一个Hash。 我们认为对于任意一个J，只存在唯一一个Hash值。
+For how data should be stored and how it should not be stored, the Yellow Book describes the definitions that are not shown. So this is an implementation issue. We simply define a function to map J to a hash. We believe that for any J, there is only one hash value.
 
-### 黄皮书的形式化定义(Hex-Prefix Encoding)--十六进制前缀编码
-十六进制前缀编码是将任意数量的半字节编码为字节数组的有效方法。它能够存储附加标志，当在Trie树中使用时(唯一会使用的地方)，会在节点类型之间消除歧义。
 
-它被定义为从一系列半字节（由集合Y表示）与布尔值一起映射到字节序列（由集合B表示）的函数HP：
+
+### Yellow Book (Hex-Prefix Encoding) - hexadecimal prefix encoding 
+Hexadecimal prefix encoding is an efficient way to encode any number of nibbles into a byte array. It is capable of storing additional flags that, when used in the Trie tree (the only place that will be used), will disambiguate between node types.
+
+It is defined as a function HP that maps from a series of nibbles (represented by the set Y) to a sequence of bytes (represented by set B) along with a Boolean value:  
 
 ![image](picture/hp_1.png)
 
-因此，第一个字节的高半字节包含两个标志; 最低bit位编码了长度的奇偶位，第二低的bit位编码了flag的值。 在偶数个半字节的情况下，第一个字节的低半字节为零，在奇数的情况下为第一个半字节。 所有剩余的半字节（现在是偶数）适合其余的字节。
+Therefore, the upper nibble of the first byte contains two flags; the lowest bit encodes the length of the parity bit, and the second lowest bit encodes the value of the flag. In the case of an even number of nibbles, the lower nibble of the first byte is zero, and in the case of an odd number, the first nibble. All remaining nibbles (now even) are suitable for the remaining bytes.
 
-## 源码实现
+## Source implementation  
 ### trie/encoding.go
-encoding.go主要处理trie树中的三种编码格式的相互转换的工作。 三种编码格式分别为下面的三种编码格式。
+Encoding.go mainly deals with the work of converting the three encoding formats in the trie tree. The three encoding formats are the following three encoding formats.
 
-- **KEYBYTES encoding**这种编码格式就是原生的key字节数组，大部分的Trie的API都是使用这边编码格式
-- **HEX encoding** 这种编码格式每一个字节包含了Key的一个半字节，尾部接上一个可选的'终结符','终结符'代表这个节点到底是叶子节点还是扩展节点。当节点被加载到内存里面的时候使用的是这种节点，因为它的方便访问。
-- **COMPACT encoding** 这种编码格式就是上面黄皮书里面说到的Hex-Prefix Encoding，这种编码格式可以看成是*HEX encoding**这种编码格式的另外一种版本，可以在存储到数据库的时候节约磁盘空间。
+- The encoding format of **KEYBYTES encoding** is the native key byte array. Most Trie APIs use this encoding format.  
+- **HEX encoding** This encoding format contains one nibble of Key and the end is followed by an optional 'terminal', which means whether the node is a leaf node or an extension node. This node is used when the node is loaded into memory because of its convenient access.  
+- The encoding format of **COMPACT encoding** is the Hex-Prefix Encoding mentioned in the above Yellow Book. This encoding format can be regarded as another version of the encoding format *HEX encoding**, which can save disk when stored in the database. space.  
 
-简单的理解为：将普通的字节序列keybytes编码为带有t标志与奇数个半字节nibble标志位的keybytes
-- keybytes为按完整字节（8bit）存储的正常信息
-- hex为按照半字节nibble（4bit）储存信息的格式。供compact使用
-- 为了便于作黄皮书中Modified Merkle Patricia Tree的节点的key，编码为偶数字节长度的hex格式。其第一个半字节nibble会在低的2个bit位中，由高到低分别存放t标志与奇数标志。经compact编码的keybytes，在增加了hex的t标志与半字节nibble为偶数个（即完整的字节）的情况下，便于存储
+Simply understood as: encode the ordinary byte sequence keybytes into keybytes with t flag and odd nibble nibble flag bits.
 
-代码实现，主要是实现了这三种编码的相互转换，以及一个求取公共前缀的方法。
 
-	func hexToCompact(hex []byte) []byte {
-		terminator := byte(0)
-		if hasTerm(hex) {
-			terminator = 1
-			hex = hex[:len(hex)-1]
-		}
-		buf := make([]byte, len(hex)/2+1)
-		buf[0] = terminator << 5 // the flag byte
-		if len(hex)&1 == 1 {
-			buf[0] |= 1 << 4 // odd flag
-			buf[0] |= hex[0] // first nibble is contained in the first byte
-			hex = hex[1:]
-		}
-		decodeNibbles(hex, buf[1:])
-		return buf
+- keybytes is the normal information stored in full bytes (8bit)
+- Hex is a format for storing information in nibble (4 bits). For compact use
+- In order to facilitate the key of the node of the Modified Merkle Patricia Tree in the Yellow Book, the code is hex format with the length of the even number of bytes. Its first nibble nibble will store the t flag and the odd flag from high to low in the lower 2 bits. The key bytes encoded by compact are easy to store when the t mark of the hex is added and the nibble of the nibble is even (ie, the complete byte).
+
+The code implementation mainly implements the mutual conversion of these three codes and a method of obtaining a common prefix.
+
+
+```go
+func hexToCompact(hex []byte) []byte {
+	terminator := byte(0)
+	if hasTerm(hex) {
+		terminator = 1
+		hex = hex[:len(hex)-1]
 	}
-	
-	func compactToHex(compact []byte) []byte {
-		base := keybytesToHex(compact)
-		base = base[:len(base)-1]
-		// apply terminator flag
-		if base[0] >= 2 { // TODO 先将keybytesToHex输出的末尾结束标志删除后，再通过判断头半个字节的标志位t加回去。操作冗余
-			base = append(base, 16)
-		}
-		// apply odd flag
-		chop := 2 - base[0]&1
-		return base[chop:]
+	buf := make([]byte, len(hex)/2+1)
+	buf[0] = terminator << 5 // the flag byte
+	if len(hex)&1 == 1 {
+		buf[0] |= 1 << 4 // odd flag
+		buf[0] |= hex[0] // first nibble is contained in the first byte
+		hex = hex[1:]
 	}
-	
-	func keybytesToHex(str []byte) []byte {
-		l := len(str)*2 + 1
-		var nibbles = make([]byte, l)
-		for i, b := range str {
-			nibbles[i*2] = b / 16
-			nibbles[i*2+1] = b % 16
-		}
-		nibbles[l-1] = 16
-		return nibbles
+	decodeNibbles(hex, buf[1:])
+	return buf
+}
+
+func compactToHex(compact []byte) []byte {
+	base := keybytesToHex(compact)
+	base = base[:len(base)-1]
+	// apply terminator flag
+	if base[0] >= 2 { // TODO first deletes the end-end flag of the keybytesToHex output, and then adds back to the flag bit t of the first half byte. Operational redundancy
+		base = append(base, 16)
 	}
-	
-	// hexToKeybytes turns hex nibbles into key bytes.
-	// This can only be used for keys of even length.
-	func hexToKeybytes(hex []byte) []byte {
-		if hasTerm(hex) {
-			hex = hex[:len(hex)-1]
-		}
-		if len(hex)&1 != 0 {
-			panic("can't convert hex key of odd length")
-		}
-		key := make([]byte, (len(hex)+1)/2) // TODO 对于一个已经判断为偶数的len(hex)在整除2的同时加1，为无效的+1逻辑
-		decodeNibbles(hex, key)
-		return key
+	// apply odd flag
+	chop := 2 - base[0]&1
+	return base[chop:]
+}
+
+func keybytesToHex(str []byte) []byte {
+	l := len(str)*2 + 1
+	var nibbles = make([]byte, l)
+	for i, b := range str {
+		nibbles[i*2] = b / 16
+		nibbles[i*2+1] = b % 16
 	}
-	
-	func decodeNibbles(nibbles []byte, bytes []byte) {
-		for bi, ni := 0, 0; ni < len(nibbles); bi, ni = bi+1, ni+2 {
-			bytes[bi] = nibbles[ni]<<4 | nibbles[ni+1]
+	nibbles[l-1] = 16
+	return nibbles
+}
+
+// hexToKeybytes turns hex nibbles into key bytes.
+// This can only be used for keys of even length.
+func hexToKeybytes(hex []byte) []byte {
+	if hasTerm(hex) {
+		hex = hex[:len(hex)-1]
+	}
+	if len(hex)&1 != 0 {
+		panic("can't convert hex key of odd length")
+	}
+	key := make([]byte, (len(hex)+1)/2) // TODO adds 1 to the len(hex) that has been judged to be even, and is invalid +1 logic.
+	decodeNibbles(hex, key)
+	return key
+}
+
+func decodeNibbles(nibbles []byte, bytes []byte) {
+	for bi, ni := 0, 0; ni < len(nibbles); bi, ni = bi+1, ni+2 {
+		bytes[bi] = nibbles[ni]<<4 | nibbles[ni+1]
+	}
+}
+
+// prefixLen returns the length of the common prefix of a and b.
+func prefixLen(a, b []byte) int {
+	var i, length = 0, len(a)
+	if len(b) < length {
+		length = len(b)
+	}
+	for ; i < length; i++ {
+		if a[i] != b[i] {
+			break
 		}
 	}
-	
-	// prefixLen returns the length of the common prefix of a and b.
-	func prefixLen(a, b []byte) int {
-		var i, length = 0, len(a)
-		if len(b) < length {
-			length = len(b)
-		}
-		for ; i < length; i++ {
-			if a[i] != b[i] {
-				break
-			}
-		}
-		return i
+	return i
+}
+
+// hasTerm returns whether a hex key has the terminator flag.
+func hasTerm(s []byte) bool {
+	return len(s) > 0 && s[len(s)-1] == 16
+}
+```
+
+### data structure  
+The structure of node, you can see that node is divided into 4 types, fullNode corresponds to the branch node in the Yellow Book, shortNode corresponds to the extension node and leaf node in the Yellow Book (by the type of shortNode.Val to correspond to the leaf node (valueNode) Or branch node (fullNode)
+
+```go
+type node interface {
+	fstring(string) string
+	cache() (hashNode, bool)
+	canUnload(cachegen, cachelimit uint16) bool
+}
+
+type (
+	fullNode struct {
+		Children [17]node // Actual trie node data to encode/decode (needs custom encoder)
+		flags    nodeFlag
 	}
-	
-	// hasTerm returns whether a hex key has the terminator flag.
-	func hasTerm(s []byte) bool {
-		return len(s) > 0 && s[len(s)-1] == 16
+	shortNode struct {
+		Key   []byte
+		Val   node
+		flags nodeFlag
 	}
+	hashNode  []byte
+	valueNode []byte // if < 32 bytes then store as valueNode
+)
+```
 
-### 数据结构
-node的结构，可以看到node分为4种类型， fullNode对应了黄皮书里面的分支节点，shortNode对应了黄皮书里面的扩展节点和叶子节点(通过shortNode.Val的类型来对应到底是叶子节点(valueNode)还是分支节点(fullNode))
+The structure of trie, root contains the current root node, db is the back-end KV storage, the structure of trie is finally stored in the form of KV to the database, and then need to be loaded from the database when starting. originalRoot starts the hash value when loading, and the hash value can be used to recover the entire trie tree in the database. The cachegen field indicates the cache age of the current Trie tree. Each time the Commit operation is invoked, the cache age of the Trie tree is increased. The cache era will be attached to the node node. If the current cache age - cachelimit parameter is greater than the node cache age, node will be uninstalled from the cache to save memory. In fact, this is the cache update LRU algorithm, if a cache is not used for a long time, then it is removed from the cache to save memory space.
 
-	type node interface {
-		fstring(string) string
-		cache() (hashNode, bool)
-		canUnload(cachegen, cachelimit uint16) bool
+
+```go
+// Trie is a Merkle Patricia Trie.
+// The zero value is an empty trie with no database.
+// Use New to create a trie that sits on top of a database.
+//
+// Trie is not safe for concurrent use.
+type Trie struct {
+	root         node
+	db           Database
+	originalRoot common.Hash
+
+	// Cache generation values.
+	// cachegen increases by one with each commit operation.
+	// new nodes are tagged with the current generation and unloaded
+	// when their generation is older than than cachegen-cachelimit.
+	cachegen, cachelimit uint16
+}
+```
+
+### Insert, find and delete Trie trees  
+The initialization of the Trie tree calls the New function. The function accepts a hash value and a Database parameter. If the hash value is not null, it means that an existing Trie tree is loaded from the database, and the trea.resolveHash method is called to load the whole Trie tree, this method will be introduced later. If root is empty, then create a new Trie tree to return.  
+
+```go
+func New(root common.Hash, db Database) (*Trie, error) {
+	trie := &Trie{db: db, originalRoot: root}
+	if (root != common.Hash{}) && root != emptyRoot {
+		if db == nil {
+			panic("trie.New: cannot use existing root without a database")
+		}
+		rootnode, err := trie.resolveHash(root[:], nil)
+		if err != nil {
+			return nil, err
+		}
+		trie.root = rootnode
 	}
-	
-	type (
-		fullNode struct {
-			Children [17]node // Actual trie node data to encode/decode (needs custom encoder)
-			flags    nodeFlag
-		}
-		shortNode struct {
-			Key   []byte
-			Val   node
-			flags nodeFlag
-		}
-		hashNode  []byte
-		valueNode []byte
-	)
+	return trie, nil
+}
+```
 
-trie的结构， root包含了当前的root节点， db是后端的KV存储，trie的结构最终都是需要通过KV的形式存储到数据库里面去，然后启动的时候是需要从数据库里面加载的。 originalRoot 启动加载的时候的hash值，通过这个hash值可以在数据库里面恢复出整颗的trie树。cachegen字段指示了当前Trie树的cache时代，每次调用Commit操作的时候，会增加Trie树的cache时代。 cache时代会被附加在node节点上面，如果当前的cache时代 - cachelimit参数 大于node的cache时代，那么node会从cache里面卸载，以便节约内存。 其实这就是缓存更新的LRU算法， 如果一个缓存在多久没有被使用，那么就从缓存里面移除，以节约内存空间。
+The insertion of the Trie tree, this is a recursive call method, starting from the root node, looking down until you find the point you can insert and insert. The parameter node is the currently inserted node, the prefix is ​​the part of the key that has been processed so far, and the key is the part of the key that has not been processed yet, the complete key = prefix + key. Value is the value that needs to be inserted. The return value bool is whether the operation changes the Trie tree (dirty), node is the root node of the subtree after the insertion is completed, and error is an error message.
 
-	// Trie is a Merkle Patricia Trie.
-	// The zero value is an empty trie with no database.
-	// Use New to create a trie that sits on top of a database.
-	//
-	// Trie is not safe for concurrent use.
-	type Trie struct {
-		root         node
-		db           Database
-		originalRoot common.Hash
-	
-		// Cache generation values.
-		// cachegen increases by one with each commit operation.
-		// new nodes are tagged with the current generation and unloaded
-		// when their generation is older than than cachegen-cachelimit.
-		cachegen, cachelimit uint16
+- If the node type is nil (the node of a brand new Trie tree is nil), the whole tree is empty at this time, directly return shortNode{key, value, t.newFlag()}, this time the whole tree is followed. It contains a shortNode node.
+- If the current root node type is shortNode (that is, the leaf node), first calculate the common prefix. If the common prefix is ​​equal to the key, then the two keys are the same. If the value is the same (dirty == false), then Return an error. Update the value of shortNode and return if there are no errors. If the common prefix does not match exactly, then the common prefix needs to be extracted to form a separate node (extended node), the extended node is connected to a branch node, and the branch node is connected to the two short nodes. First build a branch node (branch := &fullNode{flags: t.newFlag()}), and then call the t.insert of the branch node's Children location to insert the remaining two short nodes. There is a small detail here, the key encoding is HEX encoding, and there is a terminal at the end. Considering that the key of our root node is abc0x16, the key of the node we inserted is ab0x16. The following branch.Children[key[matchlen]] will work fine, 0x16 just points to the 17th child of the branch node. If the length of the match is 0, then the branch node is returned directly, otherwise the shortNode node is returned as the prefix node.
+- If the current node is a fullNode (that is, a branch node), then the insert method is directly called to the corresponding child node, and then the corresponding child node only wants the newly generated node.
+- If the current node is a hashNode, the hashNode means that the current node has not been loaded into the memory, or is stored in the database, then first call t.resolveHash(n, prefix) to load into the memory, and then call insert on the loaded node. Method to insert.
+
+
+Insert code
+
+```go
+func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error) {
+	if len(key) == 0 {
+		if v, ok := n.(valueNode); ok {
+			return !bytes.Equal(v, value.(valueNode)), value, nil
+		}
+		return true, value, nil
 	}
-
-
-###Trie树的插入，查找和删除
-Trie树的初始化调用New函数，函数接受一个hash值和一个Database参数，如果hash值不是空值的化，就说明是从数据库加载一个已经存在的Trie树， 就调用trei.resolveHash方法来加载整颗Trie树，这个方法后续会介绍。 如果root是空，那么就新建一颗Trie树返回。
-
-	func New(root common.Hash, db Database) (*Trie, error) {
-		trie := &Trie{db: db, originalRoot: root}
-		if (root != common.Hash{}) && root != emptyRoot {
-			if db == nil {
-				panic("trie.New: cannot use existing root without a database")
-			}
-			rootnode, err := trie.resolveHash(root[:], nil)
-			if err != nil {
-				return nil, err
-			}
-			trie.root = rootnode
-		}
-		return trie, nil
-	}
-
-Trie树的插入，这是一个递归调用的方法，从根节点开始，一直往下找，直到找到可以插入的点，进行插入操作。参数node是当前插入的节点， prefix是当前已经处理完的部分key， key是还没有处理玩的部分key,  完整的key = prefix + key。 value是需要插入的值。 返回值bool是操作是否改变了Trie树(dirty)，node是插入完成后的子树的根节点， error是错误信息。
-
-- 如果节点类型是nil(一颗全新的Trie树的节点就是nil的),这个时候整颗树是空的，直接返回shortNode{key, value, t.newFlag()}， 这个时候整颗树的跟就含有了一个shortNode节点。 
-- 如果当前的根节点类型是shortNode(也就是叶子节点)，首先计算公共前缀，如果公共前缀就等于key，那么说明这两个key是一样的，如果value也一样的(dirty == false)，那么返回错误。 如果没有错误就更新shortNode的值然后返回。如果公共前缀不完全匹配，那么就需要把公共前缀提取出来形成一个独立的节点(扩展节点),扩展节点后面连接一个branch节点，branch节点后面看情况连接两个short节点。首先构建一个branch节点(branch := &fullNode{flags: t.newFlag()}),然后再branch节点的Children位置调用t.insert插入剩下的两个short节点。这里有个小细节，key的编码是HEX encoding,而且末尾带了一个终结符。考虑我们的根节点的key是abc0x16，我们插入的节点的key是ab0x16。下面的branch.Children[key[matchlen]]才可以正常运行，0x16刚好指向了branch节点的第17个孩子。如果匹配的长度是0，那么直接返回这个branch节点，否则返回shortNode节点作为前缀节点。
-- 如果当前的节点是fullNode(也就是branch节点)，那么直接往对应的孩子节点调用insert方法,然后把对应的孩子节点只想新生成的节点。
-- 如果当前节点是hashNode, hashNode的意思是当前节点还没有加载到内存里面来，还是存放在数据库里面，那么首先调用 t.resolveHash(n, prefix)来加载到内存，然后对加载出来的节点调用insert方法来进行插入。
-
-
-插入代码
-
-	func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error) {
-		if len(key) == 0 {
-			if v, ok := n.(valueNode); ok {
-				return !bytes.Equal(v, value.(valueNode)), value, nil
-			}
-			return true, value, nil
-		}
-		switch n := n.(type) {
-		case *shortNode:
-			matchlen := prefixLen(key, n.Key)
-			// If the whole key matches, keep this short node as is
-			// and only update the value.
-			if matchlen == len(n.Key) {
-				dirty, nn, err := t.insert(n.Val, append(prefix, key[:matchlen]...), key[matchlen:], value)
-				if !dirty || err != nil {
-					return false, n, err
-				}
-				return true, &shortNode{n.Key, nn, t.newFlag()}, nil
-			}
-			// Otherwise branch out at the index where they differ.
-			branch := &fullNode{flags: t.newFlag()}
-			var err error
-			_, branch.Children[n.Key[matchlen]], err = t.insert(nil, append(prefix, n.Key[:matchlen+1]...), n.Key[matchlen+1:], n.Val)
-			if err != nil {
-				return false, nil, err
-			}
-			_, branch.Children[key[matchlen]], err = t.insert(nil, append(prefix, key[:matchlen+1]...), key[matchlen+1:], value)
-			if err != nil {
-				return false, nil, err
-			}
-			// Replace this shortNode with the branch if it occurs at index 0.
-			if matchlen == 0 {
-				return true, branch, nil
-			}
-			// Otherwise, replace it with a short node leading up to the branch.
-			return true, &shortNode{key[:matchlen], branch, t.newFlag()}, nil
-	
-		case *fullNode:
-			dirty, nn, err := t.insert(n.Children[key[0]], append(prefix, key[0]), key[1:], value)
+	switch n := n.(type) {
+	case *shortNode:
+		matchlen := prefixLen(key, n.Key)
+		// If the whole key matches, keep this short node as is
+		// and only update the value.
+		if matchlen == len(n.Key) {
+			dirty, nn, err := t.insert(n.Val, append(prefix, key[:matchlen]...), key[matchlen:], value)
 			if !dirty || err != nil {
 				return false, n, err
 			}
+			return true, &shortNode{n.Key, nn, t.newFlag()}, nil
+		}
+		// Otherwise branch out at the index where they differ.
+		branch := &fullNode{flags: t.newFlag()}
+		var err error
+		_, branch.Children[n.Key[matchlen]], err = t.insert(nil, append(prefix, n.Key[:matchlen+1]...), n.Key[matchlen+1:], n.Val)
+		if err != nil {
+			return false, nil, err
+		}
+		_, branch.Children[key[matchlen]], err = t.insert(nil, append(prefix, key[:matchlen+1]...), key[matchlen+1:], value)
+		if err != nil {
+			return false, nil, err
+		}
+		// Replace this shortNode with the branch if it occurs at index 0.
+		if matchlen == 0 {
+			return true, branch, nil
+		}
+		// Otherwise, replace it with a short node leading up to the branch.
+		return true, &shortNode{key[:matchlen], branch, t.newFlag()}, nil
+
+	case *fullNode:
+		dirty, nn, err := t.insert(n.Children[key[0]], append(prefix, key[0]), key[1:], value)
+		if !dirty || err != nil {
+			return false, n, err
+		}
+		n = n.copy()
+		n.flags = t.newFlag()
+		n.Children[key[0]] = nn
+		return true, n, nil
+
+	case nil:
+		return true, &shortNode{key, value, t.newFlag()}, nil
+
+	case hashNode:
+		// We've hit a part of the trie that isn't loaded yet. Load
+		// the node and insert into it. This leaves all child nodes on
+		// the path to the value in the trie.
+		rn, err := t.resolveHash(n, prefix)
+		if err != nil {
+			return false, nil, err
+		}
+		dirty, nn, err := t.insert(rn, prefix, key, value)
+		if !dirty || err != nil {
+			return false, rn, err
+		}
+		return true, nn, nil
+
+	default:
+		panic(fmt.Sprintf("%T: invalid node: %v", n, n))
+	}
+}
+```
+
+
+The Get method of the Trie tree basically simply traverses the Trie tree to get the Key information.
+
+```go
+func (t *Trie) tryGet(origNode node, key []byte, pos int) (value []byte, newnode node, didResolve bool, err error) {
+	switch n := (origNode).(type) {
+	case nil:
+		return nil, nil, false, nil
+	case valueNode:
+		return n, n, false, nil
+	case *shortNode:
+		if len(key)-pos < len(n.Key) || !bytes.Equal(n.Key, key[pos:pos+len(n.Key)]) {
+			// key not found in trie
+			return nil, n, false, nil
+		}
+		value, newnode, didResolve, err = t.tryGet(n.Val, key, pos+len(n.Key))
+		if err == nil && didResolve {
 			n = n.copy()
-			n.flags = t.newFlag()
-			n.Children[key[0]] = nn
-			return true, n, nil
-	
-		case nil:
-			return true, &shortNode{key, value, t.newFlag()}, nil
-	
-		case hashNode:
-			// We've hit a part of the trie that isn't loaded yet. Load
-			// the node and insert into it. This leaves all child nodes on
-			// the path to the value in the trie.
-			rn, err := t.resolveHash(n, prefix)
-			if err != nil {
-				return false, nil, err
-			}
-			dirty, nn, err := t.insert(rn, prefix, key, value)
-			if !dirty || err != nil {
-				return false, rn, err
-			}
-			return true, nn, nil
-	
-		default:
-			panic(fmt.Sprintf("%T: invalid node: %v", n, n))
+			n.Val = newnode
+			n.flags.gen = t.cachegen
 		}
-	}
-
-
-Trie树的Get方法，基本上就是很简单的遍历Trie树，来获取Key的信息。
-
-
-	func (t *Trie) tryGet(origNode node, key []byte, pos int) (value []byte, newnode node, didResolve bool, err error) {
-		switch n := (origNode).(type) {
-		case nil:
-			return nil, nil, false, nil
-		case valueNode:
-			return n, n, false, nil
-		case *shortNode:
-			if len(key)-pos < len(n.Key) || !bytes.Equal(n.Key, key[pos:pos+len(n.Key)]) {
-				// key not found in trie
-				return nil, n, false, nil
-			}
-			value, newnode, didResolve, err = t.tryGet(n.Val, key, pos+len(n.Key))
-			if err == nil && didResolve {
-				n = n.copy()
-				n.Val = newnode
-				n.flags.gen = t.cachegen
-			}
-			return value, n, didResolve, err
-		case *fullNode:
-			value, newnode, didResolve, err = t.tryGet(n.Children[key[pos]], key, pos+1)
-			if err == nil && didResolve {
-				n = n.copy()
-				n.flags.gen = t.cachegen
-				n.Children[key[pos]] = newnode
-			}
-			return value, n, didResolve, err
-		case hashNode:
-			child, err := t.resolveHash(n, key[:pos])
-			if err != nil {
-				return nil, n, true, err
-			}
-			value, newnode, _, err := t.tryGet(child, key, pos)
-			return value, newnode, true, err
-		default:
-			panic(fmt.Sprintf("%T: invalid node: %v", origNode, origNode))
+		return value, n, didResolve, err
+	case *fullNode:
+		value, newnode, didResolve, err = t.tryGet(n.Children[key[pos]], key, pos+1)
+		if err == nil && didResolve {
+			n = n.copy()
+			n.flags.gen = t.cachegen
+			n.Children[key[pos]] = newnode
 		}
+		return value, n, didResolve, err
+	case hashNode:
+		child, err := t.resolveHash(n, key[:pos])
+		if err != nil {
+			return nil, n, true, err
+		}
+		value, newnode, _, err := t.tryGet(child, key, pos)
+		return value, newnode, true, err
+	default:
+		panic(fmt.Sprintf("%T: invalid node: %v", origNode, origNode))
 	}
+}
+```
 
-Trie树的Delete方法，暂时不介绍，代码根插入比较类似
+The Delete method of the Trie tree is not introduced at the moment, and the code root insertion is similar.
 
-### Trie树的序列化和反序列化
-序列化主要是指把内存表示的数据存放到数据库里面， 反序列化是指把数据库里面的Trie数据加载成内存表示的数据。 序列化的目的主要是方便存储，减少存储大小等。 反序列化的目的是把存储的数据加载到内存，方便Trie树的插入，查询，修改等需求。
 
-Trie的序列化主要才作用了前面介绍的Compat Encoding和 RLP编码格式。 序列化的结构在黄皮书里面有详细的介绍。
+
+### Trie trees serialization & deserialization  
+Serialization mainly refers to storing the data represented by the memory into the database. Deserialization refers to loading the Trie data in the database into the data represented by the memory. The purpose of serialization is mainly to facilitate storage, reduce storage size and so on. The purpose of deserialization is to load the stored data into memory, facilitating the insertion, query, modification, etc. of the Trie tree.  
+
+Trie's serialization mainly affects the Compat Encoding and RLP encoding formats introduced earlier. The serialized structure is described in detail in the Yellow Book.  
 
 ![image](picture/trie_8.png)
 ![image](picture/trie_9.png)
 ![image](picture/trie_10.png)
 
-Trie树的使用方法在trie_test.go里面有比较详细的参考。 这里我列出一个简单的使用流程。首先创建一个空的Trie树，然后插入一些数据，最后调用trie.Commit()方法进行序列化并得到一个hash值(root), 也就是上图中的KEC(c(J,0))或者是TRIE(J)。
+The use of the Trie tree has a more detailed reference in trie_test.go. Here I list a simple usage process. First create an empty Trie tree, then insert some data, and finally call the trie.Commit () method to serialize and get a hash value (root), which is the KEC (c (J, 0)) in the above figure or TRIE (J).
 
-	func TestInsert(t *testing.T) {
-		trie := newEmpty()
-		updateString(trie, "doe", "reindeer")
-		updateString(trie, "dog", "puppy")
-		updateString(trie, "do", "cat")
-		root, err := trie.Commit()
-	}
 
-下面我们来分析下Commit()的主要流程。 经过一系列的调用，最终调用了hasher.go的hash方法。
+```go
+func TestInsert(t *testing.T) {
+	trie := newEmpty()
+	updateString(trie, "doe", "reindeer")
+	updateString(trie, "dog", "puppy")
+	updateString(trie, "do", "cat")
+	root, err := trie.Commit()
+}
+```
 
-	func (t *Trie) Commit() (root common.Hash, err error) {
-		if t.db == nil {
-			panic("Commit called on trie with nil database")
-		}
-		return t.CommitTo(t.db)
+Let's analyze the main process of Commit(). After a series of calls, the hash method of hasher.go is finally called.
+
+
+```go
+func (t *Trie) Commit() (root common.Hash, err error) {
+	if t.db == nil {
+		panic("Commit called on trie with nil database")
 	}
-	// CommitTo writes all nodes to the given database.
-	// Nodes are stored with their sha3 hash as the key.
-	//
-	// Committing flushes nodes from memory. Subsequent Get calls will
-	// load nodes from the trie's database. Calling code must ensure that
-	// the changes made to db are written back to the trie's attached
-	// database before using the trie.
-	func (t *Trie) CommitTo(db DatabaseWriter) (root common.Hash, err error) {
-		hash, cached, err := t.hashRoot(db)
-		if err != nil {
-			return (common.Hash{}), err
-		}
-		t.root = cached
-		t.cachegen++
-		return common.BytesToHash(hash.(hashNode)), nil
+	return t.CommitTo(t.db)
+}
+// CommitTo writes all nodes to the given database.
+// Nodes are stored with their sha3 hash as the key.
+//
+// Committing flushes nodes from memory. Subsequent Get calls will
+// load nodes from the trie's database. Calling code must ensure that
+// the changes made to db are written back to the trie's attached
+// database before using the trie.
+func (t *Trie) CommitTo(db DatabaseWriter) (root common.Hash, err error) {
+	hash, cached, err := t.hashRoot(db)
+	if err != nil {
+		return (common.Hash{}), err
 	}
+	t.root = cached
+	t.cachegen++
+	return common.BytesToHash(hash.(hashNode)), nil
+}
+
+func (t *Trie) hashRoot(db DatabaseWriter) (node, node, error) {
+	if t.root == nil {
+		return hashNode(emptyRoot.Bytes()), nil, nil
+	}
+	h := newHasher(t.cachegen, t.cachelimit)
+	defer returnHasherToPool(h)
+	return h.hash(t.root, db, true)
+}
+```
+
+Below we briefly introduce the hash method, the hash method mainly does two operations. One is to retain the original tree structure, and use the cache variable, the other is to calculate the hash of the original tree structure and store the hash value in the cache variable.  
+
+The main process of calculating the original hash value is to first call h.hashChildren(n, db) to find the hash values ​​of all the child nodes, and replace the original child nodes with the hash values ​​of the child nodes. This is a recursive call process that counts up from the leaves up to the root of the tree. Then call the store method to calculate the hash value of the current node, and put the hash value of the current node into the cache node, set the dirty parameter to false (the dirty value of the newly created node is true), and then return.  
+
+The return value indicates that the cache variable contains the original node node and contains the hash value of the node node. The hash variable returns the hash value of the current node (this value is actually calculated from all child nodes of node and node).  
+
+There is a small detail: when the root node calls the hash function, the force parameter is true, and the other child nodes call the force parameter to false. The purpose of the force parameter is to perform a hash calculation on c(J,i) when ||c(J,i)||<32, so that the root node is hashed anyway.  
+
 	
-	func (t *Trie) hashRoot(db DatabaseWriter) (node, node, error) {
-		if t.root == nil {
-			return hashNode(emptyRoot.Bytes()), nil, nil
+```go
+// hash collapses a node down into a hash node, also returning a copy of the
+// original node initialized with the computed hash to replace the original one.
+func (h *hasher) hash(n node, db DatabaseWriter, force bool) (node, node, error) {
+	// If we're not storing the node, just hashing, use available cached data
+	if hash, dirty := n.cache(); hash != nil {
+		if db == nil {
+			return hash, n, nil
 		}
-		h := newHasher(t.cachegen, t.cachelimit)
-		defer returnHasherToPool(h)
-		return h.hash(t.root, db, true)
+		if n.canUnload(h.cachegen, h.cachelimit) {
+			// Unload the node from cache. All of its subnodes will have a lower or equal
+			// cache generation number.
+			cacheUnloadCounter.Inc(1)
+			return hash, hash, nil
+		}
+		if !dirty {
+			return hash, n, nil
+		}
 	}
-
-
-下面我们简单介绍下hash方法，hash方法主要做了两个操作。 一个是保留原有的树形结构，并用cache变量中， 另一个是计算原有树形结构的hash并把hash值存放到cache变量中保存下来。
-
-计算原有hash值的主要流程是首先调用h.hashChildren(n,db)把所有的子节点的hash值求出来，把原有的子节点替换成子节点的hash值。 这是一个递归调用的过程，会从树叶依次往上计算直到树根。然后调用store方法计算当前节点的hash值，并把当前节点的hash值放入cache节点，设置dirty参数为false(新创建的节点的dirty值是为true的)，然后返回。
-
-返回值说明， cache变量包含了原有的node节点，并且包含了node节点的hash值。 hash变量返回了当前节点的hash值(这个值其实是根据node和node的所有子节点计算出来的)。
-
-有一个小细节： 根节点调用hash函数的时候， force参数是为true的，其他的子节点调用的时候force参数是为false的。 force参数的用途是当||c(J,i)||<32的时候也对c(J,i)进行hash计算，这样保证无论如何也会对根节点进行Hash计算。
-	
-	// hash collapses a node down into a hash node, also returning a copy of the
-	// original node initialized with the computed hash to replace the original one.
-	func (h *hasher) hash(n node, db DatabaseWriter, force bool) (node, node, error) {
-		// If we're not storing the node, just hashing, use available cached data
-		if hash, dirty := n.cache(); hash != nil {
-			if db == nil {
-				return hash, n, nil
-			}
-			if n.canUnload(h.cachegen, h.cachelimit) {
-				// Unload the node from cache. All of its subnodes will have a lower or equal
-				// cache generation number.
-				cacheUnloadCounter.Inc(1)
-				return hash, hash, nil
-			}
-			if !dirty {
-				return hash, n, nil
-			}
-		}
-		// Trie not processed yet or needs storage, walk the children
-		collapsed, cached, err := h.hashChildren(n, db)
-		if err != nil {
-			return hashNode{}, n, err
-		}
-		hashed, err := h.store(collapsed, db, force)
-		if err != nil {
-			return hashNode{}, n, err
-		}
-		// Cache the hash of the node for later reuse and remove
-		// the dirty flag in commit mode. It's fine to assign these values directly
-		// without copying the node first because hashChildren copies it.
-		cachedHash, _ := hashed.(hashNode)
-		switch cn := cached.(type) {
-		case *shortNode:
-			cn.flags.hash = cachedHash
-			if db != nil {
-				cn.flags.dirty = false
-			}
-		case *fullNode:
-			cn.flags.hash = cachedHash
-			if db != nil {
-				cn.flags.dirty = false
-			}
-		}
-		return hashed, cached, nil
+	// Trie not processed yet or needs storage, walk the children
+	collapsed, cached, err := h.hashChildren(n, db)
+	if err != nil {
+		return hashNode{}, n, err
 	}
+	hashed, err := h.store(collapsed, db, force)
+	if err != nil {
+		return hashNode{}, n, err
+	}
+	// Cache the hash of the node for later reuse and remove
+	// the dirty flag in commit mode. It's fine to assign these values directly
+	// without copying the node first because hashChildren copies it.
+	cachedHash, _ := hashed.(hashNode)
+	switch cn := cached.(type) {
+	case *shortNode:
+		cn.flags.hash = cachedHash
+		if db != nil {
+			cn.flags.dirty = false
+		}
+	case *fullNode:
+		cn.flags.hash = cachedHash
+		if db != nil {
+			cn.flags.dirty = false
+		}
+	}
+	return hashed, cached, nil
+}
+```
 
-hashChildren方法,这个方法把所有的子节点替换成他们的hash，可以看到cache变量接管了原来的Trie树的完整结构，collapsed变量把子节点替换成子节点的hash值。
+The hashChildren method, which replaces all child nodes with their hashes. You can see that the cache variable takes over the complete structure of the original Trie tree, and the collapsed variable replaces the child nodes with the hash values ​​of the child nodes.
 
-- 如果当前节点是shortNode, 首先把collapsed.Key从Hex Encoding 替换成 Compact Encoding, 然后递归调用hash方法计算子节点的hash和cache，这样就把子节点替换成了子节点的hash值，
-- 如果当前节点是fullNode, 那么遍历每个子节点，把子节点替换成子节点的Hash值，
-- 否则的化这个节点没有children。直接返回。
+- If the current node is a shortNode, first replace the collapsed.Key from Hex Encoding to Compact Encoding, and then recursively call the hash method to calculate the child node's hash and cache, thus replacing the child node with the child node's hash value.
+- If the current node is a fullNode, then traverse each child node and replace the child node with the hash value of the child node.
+- Otherwise this node has no children. Return directly.
 
-代码
+Code
 
-	// hashChildren replaces the children of a node with their hashes if the encoded
-	// size of the child is larger than a hash, returning the collapsed node as well
-	// as a replacement for the original node with the child hashes cached in.
-	func (h *hasher) hashChildren(original node, db DatabaseWriter) (node, node, error) {
-		var err error
-	
-		switch n := original.(type) {
-		case *shortNode:
-			// Hash the short node's child, caching the newly hashed subtree
-			collapsed, cached := n.copy(), n.copy()
-			collapsed.Key = hexToCompact(n.Key)
-			cached.Key = common.CopyBytes(n.Key)
-	
-			if _, ok := n.Val.(valueNode); !ok {
-				collapsed.Val, cached.Val, err = h.hash(n.Val, db, false)
+```go
+// hashChildren replaces the children of a node with their hashes if the encoded
+// size of the child is larger than a hash, returning the collapsed node as well
+// as a replacement for the original node with the child hashes cached in.
+func (h *hasher) hashChildren(original node, db DatabaseWriter) (node, node, error) {
+	var err error
+
+	switch n := original.(type) {
+	case *shortNode:
+		// Hash the short node's child, caching the newly hashed subtree
+		collapsed, cached := n.copy(), n.copy()
+		collapsed.Key = hexToCompact(n.Key)
+		cached.Key = common.CopyBytes(n.Key)
+
+		if _, ok := n.Val.(valueNode); !ok {
+			collapsed.Val, cached.Val, err = h.hash(n.Val, db, false)
+			if err != nil {
+				return original, original, err
+			}
+		}
+		if collapsed.Val == nil {
+			collapsed.Val = valueNode(nil) // Ensure that nil children are encoded as empty strings.
+		}
+		return collapsed, cached, nil
+
+	case *fullNode:
+		// Hash the full node's children, caching the newly hashed subtrees
+		collapsed, cached := n.copy(), n.copy()
+
+		for i := 0; i < 16; i++ {
+			if n.Children[i] != nil {
+				collapsed.Children[i], cached.Children[i], err = h.hash(n.Children[i], db, false)
 				if err != nil {
 					return original, original, err
 				}
+			} else {
+				collapsed.Children[i] = valueNode(nil) // Ensure that nil children are encoded as empty strings.
 			}
-			if collapsed.Val == nil {
-				collapsed.Val = valueNode(nil) // Ensure that nil children are encoded as empty strings.
-			}
-			return collapsed, cached, nil
-	
-		case *fullNode:
-			// Hash the full node's children, caching the newly hashed subtrees
-			collapsed, cached := n.copy(), n.copy()
-	
-			for i := 0; i < 16; i++ {
-				if n.Children[i] != nil {
-					collapsed.Children[i], cached.Children[i], err = h.hash(n.Children[i], db, false)
-					if err != nil {
-						return original, original, err
-					}
-				} else {
-					collapsed.Children[i] = valueNode(nil) // Ensure that nil children are encoded as empty strings.
-				}
-			}
-			cached.Children[16] = n.Children[16]
-			if collapsed.Children[16] == nil {
-				collapsed.Children[16] = valueNode(nil)
-			}
-			return collapsed, cached, nil
-	
-		default:
-			// Value and hash nodes don't have children so they're left as were
-			return n, original, nil
 		}
+		cached.Children[16] = n.Children[16]
+		if collapsed.Children[16] == nil {
+			collapsed.Children[16] = valueNode(nil)
+		}
+		return collapsed, cached, nil
+
+	default:
+		// Value and hash nodes don't have children so they're left as were
+		return n, original, nil
 	}
+}
+```
 
+Store method, if all the child nodes of a node are replaced with the hash value of the child node, then directly call the rlp.Encode method to encode the node. If the encoded value is less than 32, and the node is not the root node, then Store them directly in their parent node, otherwise call the h.sha.Write method to perform the hash calculation, then store the hash value and the encoded data in the database, and then return the hash value.  
 
-store方法，如果一个node的所有子节点都替换成了子节点的hash值，那么直接调用rlp.Encode方法对这个节点进行编码，如果编码后的值小于32，并且这个节点不是根节点，那么就把他们直接存储在他们的父节点里面，否者调用h.sha.Write方法进行hash计算， 然后把hash值和编码后的数据存储到数据库里面，然后返回hash值。
+You can see that the value of each node with a value greater than 32 and the hash are stored in the database.
 
-可以看到每个值大于32的节点的值和hash都存储到了数据库里面，
-
-	func (h *hasher) store(n node, db DatabaseWriter, force bool) (node, error) {
-		// Don't store hashes or empty nodes.
-		if _, isHash := n.(hashNode); n == nil || isHash {
-			return n, nil
-		}
-		// Generate the RLP encoding of the node
-		h.tmp.Reset()
-		if err := rlp.Encode(h.tmp, n); err != nil {
-			panic("encode error: " + err.Error())
-		}
-	
-		if h.tmp.Len() < 32 && !force {
-			return n, nil // Nodes smaller than 32 bytes are stored inside their parent
-		}
-		// Larger nodes are replaced by their hash and stored in the database.
-		hash, _ := n.cache()
-		if hash == nil {
-			h.sha.Reset()
-			h.sha.Write(h.tmp.Bytes())
-			hash = hashNode(h.sha.Sum(nil))
-		}
-		if db != nil {
-			return hash, db.Put(hash, h.tmp.Bytes())
-		}
-		return hash, nil
-	}
-
-
-Trie的反序列化过程。还记得之前创建Trie树的流程么。 如果参数root的hash值不为空，那么就会调用rootnode, err := trie.resolveHash(root[:], nil) 方法来得到rootnode节点。 首先从数据库里面通过hash值获取节点的RLP编码后的内容。 然后调用decodeNode来解析内容。
-
-	func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
-		cacheMissCounter.Inc(1)
-	
-		enc, err := t.db.Get(n)
-		if err != nil || enc == nil {
-			return nil, &MissingNodeError{NodeHash: common.BytesToHash(n), Path: prefix}
-		}
-		dec := mustDecodeNode(n, enc, t.cachegen)
-		return dec, nil
-	}
-	func mustDecodeNode(hash, buf []byte, cachegen uint16) node {
-		n, err := decodeNode(hash, buf, cachegen)
-		if err != nil {
-			panic(fmt.Sprintf("node %x: %v", hash, err))
-		}
-		return n
-	}
-
-decodeNode方法，这个方法根据rlp的list的长度来判断这个编码到底属于什么节点，如果是2个字段那么就是shortNode节点，如果是17个字段，那么就是fullNode，然后分别调用各自的解析函数。
-
-	// decodeNode parses the RLP encoding of a trie node.
-	func decodeNode(hash, buf []byte, cachegen uint16) (node, error) {
-		if len(buf) == 0 {
-			return nil, io.ErrUnexpectedEOF
-		}
-		elems, _, err := rlp.SplitList(buf)
-		if err != nil {
-			return nil, fmt.Errorf("decode error: %v", err)
-		}
-		switch c, _ := rlp.CountValues(elems); c {
-		case 2:
-			n, err := decodeShort(hash, buf, elems, cachegen)
-			return n, wrapError(err, "short")
-		case 17:
-			n, err := decodeFull(hash, buf, elems, cachegen)
-			return n, wrapError(err, "full")
-		default:
-			return nil, fmt.Errorf("invalid number of list elements: %v", c)
-		}
-	}
-
-decodeShort方法，通过key是否有终结符号来判断到底是叶子节点还是中间节点。如果有终结符那么就是叶子结点，通过SplitString方法解析出来val然后生成一个shortNode。 不过没有终结符，那么说明是扩展节点， 通过decodeRef来解析剩下的节点，然后生成一个shortNode。
-
-	func decodeShort(hash, buf, elems []byte, cachegen uint16) (node, error) {
-		kbuf, rest, err := rlp.SplitString(elems)
-		if err != nil {
-			return nil, err
-		}
-		flag := nodeFlag{hash: hash, gen: cachegen}
-		key := compactToHex(kbuf)
-		if hasTerm(key) {
-			// value node
-			val, _, err := rlp.SplitString(rest)
-			if err != nil {
-				return nil, fmt.Errorf("invalid value node: %v", err)
-			}
-			return &shortNode{key, append(valueNode{}, val...), flag}, nil
-		}
-		r, _, err := decodeRef(rest, cachegen)
-		if err != nil {
-			return nil, wrapError(err, "val")
-		}
-		return &shortNode{key, r, flag}, nil
-	}
-
-decodeRef方法根据数据类型进行解析，如果类型是list，那么有可能是内容<32的值，那么调用decodeNode进行解析。 如果是空节点，那么返回空，如果是hash值，那么构造一个hashNode进行返回，注意的是这里没有继续进行解析，如果需要继续解析这个hashNode，那么需要继续调用resolveHash方法。 到这里decodeShort方法就调用完成了。
-
-	func decodeRef(buf []byte, cachegen uint16) (node, []byte, error) {
-		kind, val, rest, err := rlp.Split(buf)
-		if err != nil {
-			return nil, buf, err
-		}
-		switch {
-		case kind == rlp.List:
-			// 'embedded' node reference. The encoding must be smaller
-			// than a hash in order to be valid.
-			if size := len(buf) - len(rest); size > hashLen {
-				err := fmt.Errorf("oversized embedded node (size is %d bytes, want size < %d)", size, hashLen)
-				return nil, buf, err
-			}
-			n, err := decodeNode(nil, buf, cachegen)
-			return n, rest, err
-		case kind == rlp.String && len(val) == 0:
-			// empty node
-			return nil, rest, nil
-		case kind == rlp.String && len(val) == 32:
-			return append(hashNode{}, val...), rest, nil
-		default:
-			return nil, nil, fmt.Errorf("invalid RLP string size %d (want 0 or 32)", len(val))
-		}
-	}
-
-decodeFull方法。根decodeShort方法的流程差不多。
-
-	
-	func decodeFull(hash, buf, elems []byte, cachegen uint16) (*fullNode, error) {
-		n := &fullNode{flags: nodeFlag{hash: hash, gen: cachegen}}
-		for i := 0; i < 16; i++ {
-			cld, rest, err := decodeRef(elems, cachegen)
-			if err != nil {
-				return n, wrapError(err, fmt.Sprintf("[%d]", i))
-			}
-			n.Children[i], elems = cld, rest
-		}
-		val, _, err := rlp.SplitString(elems)
-		if err != nil {
-			return n, err
-		}
-		if len(val) > 0 {
-			n.Children[16] = append(valueNode{}, val...)
-		}
+```go
+func (h *hasher) store(n node, db DatabaseWriter, force bool) (node, error) {
+	// Don't store hashes or empty nodes.
+	if _, isHash := n.(hashNode); n == nil || isHash {
 		return n, nil
 	}
+	// Generate the RLP encoding of the node
+	h.tmp.Reset()
+	if err := rlp.Encode(h.tmp, n); err != nil {
+		panic("encode error: " + err.Error())
+	}
+
+	if h.tmp.Len() < 32 && !force {
+		return n, nil // Nodes smaller than 32 bytes are stored inside their parent
+	}
+	// Larger nodes are replaced by their hash and stored in the database.
+	hash, _ := n.cache()
+	if hash == nil {
+		h.sha.Reset()
+		h.sha.Write(h.tmp.Bytes())
+		hash = hashNode(h.sha.Sum(nil))
+	}
+	if db != nil {
+		return hash, db.Put(hash, h.tmp.Bytes())
+	}
+	return hash, nil
+}
+```
+
+Trie's deserialization process. Remember the process of creating a Trie tree before. If the parameter root's hash value is not empty, then the rootnode, err := trie.resolveHash(root[:], nil) method is called to get the rootnode node. First, the RLP encoded content of the node is obtained from the database through the hash value. Then call decodeNode to parse the content.
+
+```go
+func (t *Trie) resolveHash(n hashNode, prefix []byte) (node, error) {
+	cacheMissCounter.Inc(1)
+
+	enc, err := t.db.Get(n)
+	if err != nil || enc == nil {
+		return nil, &MissingNodeError{NodeHash: common.BytesToHash(n), Path: prefix}
+	}
+	dec := mustDecodeNode(n, enc, t.cachegen)
+	return dec, nil
+}
+func mustDecodeNode(hash, buf []byte, cachegen uint16) node {
+	n, err := decodeNode(hash, buf, cachegen)
+	if err != nil {
+		panic(fmt.Sprintf("node %x: %v", hash, err))
+	}
+	return n
+}
+```
+
+The decodeNode method, this method determines the node to which the encoding belongs according to the length of the list of the rlp. If it is 2 fields, it is the shortNode node. If it is 17 fields, it is fullNode, and then calls the respective analytic functions.
+
+```go
+// decodeNode parses the RLP encoding of a trie node.
+func decodeNode(hash, buf []byte, cachegen uint16) (node, error) {
+	if len(buf) == 0 {
+		return nil, io.ErrUnexpectedEOF
+	}
+	elems, _, err := rlp.SplitList(buf)
+	if err != nil {
+		return nil, fmt.Errorf("decode error: %v", err)
+	}
+	switch c, _ := rlp.CountValues(elems); c {
+	case 2:
+		n, err := decodeShort(hash, buf, elems, cachegen)
+		return n, wrapError(err, "short")
+	case 17:
+		n, err := decodeFull(hash, buf, elems, cachegen)
+		return n, wrapError(err, "full")
+	default:
+		return nil, fmt.Errorf("invalid number of list elements: %v", c)
+	}
+}
+```
+
+The decodeShort method determines whether a leaf node or an intermediate node is determined by whether the key has a terminal symbol. If there is a terminal, then the leaf node, parse out val through the SplitString method and generate a shortNode. However, there is no terminator, then the description is the extension node, the remaining nodes are resolved by decodeRef, and then a shortNode is generated.
 
 
-### Trie树的cache管理
-Trie树的cache管理。 还记得Trie树的结构里面有两个参数， 一个是cachegen,一个是cachelimit。这两个参数就是cache控制的参数。 Trie树每一次调用Commit方法，会导致当前的cachegen增加1。
-	
-	func (t *Trie) CommitTo(db DatabaseWriter) (root common.Hash, err error) {
-		hash, cached, err := t.hashRoot(db)
+```go
+func decodeShort(hash, buf, elems []byte, cachegen uint16) (node, error) {
+	kbuf, rest, err := rlp.SplitString(elems)
+	if err != nil {
+		return nil, err
+	}
+	flag := nodeFlag{hash: hash, gen: cachegen}
+	key := compactToHex(kbuf)
+	if hasTerm(key) {
+		// value node
+		val, _, err := rlp.SplitString(rest)
 		if err != nil {
-			return (common.Hash{}), err
+			return nil, fmt.Errorf("invalid value node: %v", err)
 		}
-		t.root = cached
-		t.cachegen++
-		return common.BytesToHash(hash.(hashNode)), nil
+		return &shortNode{key, append(valueNode{}, val...), flag}, nil
 	}
-
-然后在Trie树插入的时候，会把当前的cachegen存放到节点中。
-
-	func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error) {
-				....
-				return true, &shortNode{n.Key, nn, t.newFlag()}, nil
-			}
-
-	// newFlag returns the cache flag value for a newly created node.
-	func (t *Trie) newFlag() nodeFlag {
-		return nodeFlag{dirty: true, gen: t.cachegen}
+	r, _, err := decodeRef(rest, cachegen)
+	if err != nil {
+		return nil, wrapError(err, "val")
 	}
+	return &shortNode{key, r, flag}, nil
+}
+```
 
-如果 trie.cachegen - node.cachegen > cachelimit，就可以把节点从内存里面卸载掉。 也就是说节点经过几次Commit，都没有修改，那么就把节点从内存里面卸载，以便节约内存给其他节点使用。
+The decodeRef method parses according to the data type. If the type is list, then it may be the value of the content <32, then call decodeNode to parse. If it is an empty node, it returns null. If it is a hash value, construct a hashNode to return. Note that there is no further analysis here. If you need to continue parsing the hashNode, you need to continue to call the resolveHash method. The call to the decodeShort method is complete.
 
-卸载过程在我们的 hasher.hash方法中， 这个方法是在commit的时候调用。如果方法的canUnload方法调用返回真，那么就卸载节点，观察他的返回值，只返回了hash节点，而没有返回node节点，这样节点就没有引用，不久就会被gc清除掉。 节点被卸载掉之后，会用一个hashNode节点来表示这个节点以及其子节点。 如果后续需要使用，可以通过方法把这个节点加载到内存里面来。
 
-	func (h *hasher) hash(n node, db DatabaseWriter, force bool) (node, node, error) {
-		if hash, dirty := n.cache(); hash != nil {
-			if db == nil {
-				return hash, n, nil
-			}
-			if n.canUnload(h.cachegen, h.cachelimit) {
-				// Unload the node from cache. All of its subnodes will have a lower or equal
-				// cache generation number.
-				cacheUnloadCounter.Inc(1)
-				return hash, hash, nil
-			}
-			if !dirty {
-				return hash, n, nil
-			}
+```go
+func decodeRef(buf []byte, cachegen uint16) (node, []byte, error) {
+	kind, val, rest, err := rlp.Split(buf)
+	if err != nil {
+		return nil, buf, err
+	}
+	switch {
+	case kind == rlp.List:
+		// 'embedded' node reference. The encoding must be smaller
+		// than a hash in order to be valid.
+		if size := len(buf) - len(rest); size > hashLen {
+			err := fmt.Errorf("oversized embedded node (size is %d bytes, want size < %d)", size, hashLen)
+			return nil, buf, err
 		}
-
-canUnload方法是一个接口，不同的node调用不同的方法。
-
-	// canUnload tells whether a node can be unloaded.
-	func (n *nodeFlag) canUnload(cachegen, cachelimit uint16) bool {
-		return !n.dirty && cachegen-n.gen >= cachelimit
+		n, err := decodeNode(nil, buf, cachegen)
+		return n, rest, err
+	case kind == rlp.String && len(val) == 0:
+		// empty node
+		return nil, rest, nil
+	case kind == rlp.String && len(val) == 32:
+		return append(hashNode{}, val...), rest, nil
+	default:
+		return nil, nil, fmt.Errorf("invalid RLP string size %d (want 0 or 32)", len(val))
 	}
+}
+```
+
+decodeFull method. The process of the root decodeShort method is similar.
+
+```go	
+func decodeFull(hash, buf, elems []byte, cachegen uint16) (*fullNode, error) {
+	n := &fullNode{flags: nodeFlag{hash: hash, gen: cachegen}}
+	for i := 0; i < 16; i++ {
+		cld, rest, err := decodeRef(elems, cachegen)
+		if err != nil {
+			return n, wrapError(err, fmt.Sprintf("[%d]", i))
+		}
+		n.Children[i], elems = cld, rest
+	}
+	val, _, err := rlp.SplitString(elems)
+	if err != nil {
+		return n, err
+	}
+	if len(val) > 0 {
+		n.Children[16] = append(valueNode{}, val...)
+	}
+	return n, nil
+}
+```
+
+### Trie tree cache management
+
+The cache management of the Trie tree. Remember that there are two parameters in the structure of the Trie tree, one is cachegen and the other is cachelimit. These two parameters are the parameters of the cache control. Each time the Trie tree calls the Commit method, it will cause the current cachegen to increase by 1.
 	
-	func (n *fullNode) canUnload(gen, limit uint16) bool  { return n.flags.canUnload(gen, limit) }
-	func (n *shortNode) canUnload(gen, limit uint16) bool { return n.flags.canUnload(gen, limit) }
-	func (n hashNode) canUnload(uint16, uint16) bool      { return false }
-	func (n valueNode) canUnload(uint16, uint16) bool     { return false }
-	
-	func (n *fullNode) cache() (hashNode, bool)  { return n.flags.hash, n.flags.dirty }
-	func (n *shortNode) cache() (hashNode, bool) { return n.flags.hash, n.flags.dirty }
-	func (n hashNode) cache() (hashNode, bool)   { return nil, true }
-	func (n valueNode) cache() (hashNode, bool)  { return nil, true }
-
-### proof.go Trie树的默克尔证明
-主要提供两个方法，Prove方法获取指定Key的proof证明， proof证明是从根节点到叶子节点的所有节点的hash值列表。 VerifyProof方法，接受一个roothash值和proof证明和key来验证key是否存在。
-
-Prove方法，从根节点开始。把经过的节点的hash值一个一个存入到list中。然后返回。
-	
-	// Prove constructs a merkle proof for key. The result contains all
-	// encoded nodes on the path to the value at key. The value itself is
-	// also included in the last node and can be retrieved by verifying
-	// the proof.
-	//
-	// If the trie does not contain a value for key, the returned proof
-	// contains all nodes of the longest existing prefix of the key
-	// (at least the root node), ending with the node that proves the
-	// absence of the key.
-	func (t *Trie) Prove(key []byte) []rlp.RawValue {
-		// Collect all nodes on the path to key.
-		key = keybytesToHex(key)
-		nodes := []node{}
-		tn := t.root
-		for len(key) > 0 && tn != nil {
-			switch n := tn.(type) {
-			case *shortNode:
-				if len(key) < len(n.Key) || !bytes.Equal(n.Key, key[:len(n.Key)]) {
-					// The trie doesn't contain the key.
-					tn = nil
-				} else {
-					tn = n.Val
-					key = key[len(n.Key):]
-				}
-				nodes = append(nodes, n)
-			case *fullNode:
-				tn = n.Children[key[0]]
-				key = key[1:]
-				nodes = append(nodes, n)
-			case hashNode:
-				var err error
-				tn, err = t.resolveHash(n, nil)
-				if err != nil {
-					log.Error(fmt.Sprintf("Unhandled trie error: %v", err))
-					return nil
-				}
-			default:
-				panic(fmt.Sprintf("%T: invalid node: %v", tn, tn))
-			}
-		}
-		hasher := newHasher(0, 0)
-		proof := make([]rlp.RawValue, 0, len(nodes))
-		for i, n := range nodes {
-			// Don't bother checking for errors here since hasher panics
-			// if encoding doesn't work and we're not writing to any database.
-			n, _, _ = hasher.hashChildren(n, nil)
-			hn, _ := hasher.store(n, nil, false)
-			if _, ok := hn.(hashNode); ok || i == 0 {
-				// If the node's database encoding is a hash (or is the
-				// root node), it becomes a proof element.
-				enc, _ := rlp.EncodeToBytes(n)
-				proof = append(proof, enc)
-			}
-		}
-		return proof
+```go
+func (t *Trie) CommitTo(db DatabaseWriter) (root common.Hash, err error) {
+	hash, cached, err := t.hashRoot(db)
+	if err != nil {
+		return (common.Hash{}), err
 	}
+	t.root = cached
+	t.cachegen++
+	return common.BytesToHash(hash.(hashNode)), nil
+}
+```
 
-VerifyProof方法，接收一个rootHash参数，key参数，和proof数组， 来一个一个验证是否能够和数据库里面的能够对应上。
+Then when the Trie tree is inserted, the current cachegen will be stored in the node.
 
-	// VerifyProof checks merkle proofs. The given proof must contain the
-	// value for key in a trie with the given root hash. VerifyProof
-	// returns an error if the proof contains invalid trie nodes or the
-	// wrong value.
-	func VerifyProof(rootHash common.Hash, key []byte, proof []rlp.RawValue) (value []byte, err error) {
-		key = keybytesToHex(key)
-		sha := sha3.NewKeccak256()
-		wantHash := rootHash.Bytes()
-		for i, buf := range proof {
-			sha.Reset()
-			sha.Write(buf)
-			if !bytes.Equal(sha.Sum(nil), wantHash) {
-				return nil, fmt.Errorf("bad proof node %d: hash mismatch", i)
-			}
-			n, err := decodeNode(wantHash, buf, 0)
-			if err != nil {
-				return nil, fmt.Errorf("bad proof node %d: %v", i, err)
-			}
-			keyrest, cld := get(n, key)
-			switch cld := cld.(type) {
-			case nil:
-				if i != len(proof)-1 {
-					return nil, fmt.Errorf("key mismatch at proof node %d", i)
-				} else {
-					// The trie doesn't contain the key.
-					return nil, nil
-				}
-			case hashNode:
-				key = keyrest
-				wantHash = cld
-			case valueNode:
-				if i != len(proof)-1 {
-					return nil, errors.New("additional nodes at end of proof")
-				}
-				return cld, nil
-			}
+
+```go
+func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error) {
+			....
+			return true, &shortNode{n.Key, nn, t.newFlag()}, nil
 		}
-		return nil, errors.New("unexpected end of proof")
+
+// newFlag returns the cache flag value for a newly created node.
+func (t *Trie) newFlag() nodeFlag {
+	return nodeFlag{dirty: true, gen: t.cachegen}
+}
+```
+
+If trie.cachegen - node.cachegen > cachelimit, you can unload the node from memory. That is to say, after several times of Commit, the node has not been modified, then the node is unloaded from the memory to save memory for other nodes.  
+
+The uninstall process is in our hasher.hash method, which is called at commit time. If the method's canUnload method call returns true, then the node is unloaded, its return value is observed, only the hash node is returned, and the node node is not returned, so the node is not referenced and will be cleared by gc soon. After the node is unloaded, a hashNode node is used to represent the node and its children. If you need to use it later, you can load this node into memory by method.
+
+
+```go
+func (h *hasher) hash(n node, db DatabaseWriter, force bool) (node, node, error) {
+	if hash, dirty := n.cache(); hash != nil {
+		if db == nil {
+			return hash, n, nil
+		}
+		if n.canUnload(h.cachegen, h.cachelimit) {
+			// Unload the node from cache. All of its subnodes will have a lower or equal
+			// cache generation number.
+			cacheUnloadCounter.Inc(1)
+			return hash, hash, nil
+		}
+		if !dirty {
+			return hash, n, nil
+		}
 	}
+}
+```
+
+The canUnload method is an interface, and different nodes call different methods.
+
+```go
+// canUnload tells whether a node can be unloaded.
+func (n *nodeFlag) canUnload(cachegen, cachelimit uint16) bool {
+	return !n.dirty && cachegen-n.gen >= cachelimit
+}
+
+func (n *fullNode) canUnload(gen, limit uint16) bool  { return n.flags.canUnload(gen, limit) }
+func (n *shortNode) canUnload(gen, limit uint16) bool { return n.flags.canUnload(gen, limit) }
+func (n hashNode) canUnload(uint16, uint16) bool      { return false }
+func (n valueNode) canUnload(uint16, uint16) bool     { return false }
+
+func (n *fullNode) cache() (hashNode, bool)  { return n.flags.hash, n.flags.dirty }
+func (n *shortNode) cache() (hashNode, bool) { return n.flags.hash, n.flags.dirty }
+func (n hashNode) cache() (hashNode, bool)   { return nil, true }
+func (n valueNode) cache() (hashNode, bool)  { return nil, true }
+```
+
+### Proof.go Merkel proof of the Trie tree
+There are two main methods. The Prove method obtains the proof of the specified Key. The proof is a list of hash values ​​for all nodes from the root node to the leaf node. The VerifyProof method accepts a roothash value and proof and key to verify that the key exists.  
+
+Prove method, starting from the root node. Store the hash values ​​of the passed nodes one by one into the list. Then return.
 	
-	func get(tn node, key []byte) ([]byte, node) {
-		for {
-			switch n := tn.(type) {
-			case *shortNode:
-				if len(key) < len(n.Key) || !bytes.Equal(n.Key, key[:len(n.Key)]) {
-					return nil, nil
-				}
+```go
+// Prove constructs a merkle proof for key. The result contains all
+// encoded nodes on the path to the value at key. The value itself is
+// also included in the last node and can be retrieved by verifying
+// the proof.
+//
+// If the trie does not contain a value for key, the returned proof
+// contains all nodes of the longest existing prefix of the key
+// (at least the root node), ending with the node that proves the
+// absence of the key.
+func (t *Trie) Prove(key []byte) []rlp.RawValue {
+	// Collect all nodes on the path to key.
+	key = keybytesToHex(key)
+	nodes := []node{}
+	tn := t.root
+	for len(key) > 0 && tn != nil {
+		switch n := tn.(type) {
+		case *shortNode:
+			if len(key) < len(n.Key) || !bytes.Equal(n.Key, key[:len(n.Key)]) {
+				// The trie doesn't contain the key.
+				tn = nil
+			} else {
 				tn = n.Val
 				key = key[len(n.Key):]
-			case *fullNode:
-				tn = n.Children[key[0]]
-				key = key[1:]
-			case hashNode:
-				return key, n
-			case nil:
-				return key, nil
-			case valueNode:
-				return nil, n
-			default:
-				panic(fmt.Sprintf("%T: invalid node: %v", tn, tn))
+			}
+			nodes = append(nodes, n)
+		case *fullNode:
+			tn = n.Children[key[0]]
+			key = key[1:]
+			nodes = append(nodes, n)
+		case hashNode:
+			var err error
+			tn, err = t.resolveHash(n, nil)
+			if err != nil {
+				log.Error(fmt.Sprintf("Unhandled trie error: %v", err))
+				return nil
+			}
+		default:
+			panic(fmt.Sprintf("%T: invalid node: %v", tn, tn))
+		}
+	}
+	hasher := newHasher(0, 0)
+	proof := make([]rlp.RawValue, 0, len(nodes))
+	for i, n := range nodes {
+		// Don't bother checking for errors here since hasher panics
+		// if encoding doesn't work and we're not writing to any database.
+		n, _, _ = hasher.hashChildren(n, nil)
+		hn, _ := hasher.store(n, nil, false)
+		if _, ok := hn.(hashNode); ok || i == 0 {
+			// If the node's database encoding is a hash (or is the
+			// root node), it becomes a proof element.
+			enc, _ := rlp.EncodeToBytes(n)
+			proof = append(proof, enc)
+		}
+	}
+	return proof
+}
+```
+
+The VerifyProof method receives a rootHash parameter, a key parameter, and a proof array, to verify whether it can correspond to the database.
+
+
+```go
+// VerifyProof checks merkle proofs. The given proof must contain the
+// value for key in a trie with the given root hash. VerifyProof
+// returns an error if the proof contains invalid trie nodes or the
+// wrong value.
+func VerifyProof(rootHash common.Hash, key []byte, proof []rlp.RawValue) (value []byte, err error) {
+	key = keybytesToHex(key)
+	sha := sha3.NewKeccak256()
+	wantHash := rootHash.Bytes()
+	for i, buf := range proof {
+		sha.Reset()
+		sha.Write(buf)
+		if !bytes.Equal(sha.Sum(nil), wantHash) {
+			return nil, fmt.Errorf("bad proof node %d: hash mismatch", i)
+		}
+		n, err := decodeNode(wantHash, buf, 0)
+		if err != nil {
+			return nil, fmt.Errorf("bad proof node %d: %v", i, err)
+		}
+		keyrest, cld := get(n, key)
+		switch cld := cld.(type) {
+		case nil:
+			if i != len(proof)-1 {
+				return nil, fmt.Errorf("key mismatch at proof node %d", i)
+			} else {
+				// The trie doesn't contain the key.
+				return nil, nil
+			}
+		case hashNode:
+			key = keyrest
+			wantHash = cld
+		case valueNode:
+			if i != len(proof)-1 {
+				return nil, errors.New("additional nodes at end of proof")
+			}
+			return cld, nil
+		}
+	}
+	return nil, errors.New("unexpected end of proof")
+}
+
+func get(tn node, key []byte) ([]byte, node) {
+	for {
+		switch n := tn.(type) {
+		case *shortNode:
+			if len(key) < len(n.Key) || !bytes.Equal(n.Key, key[:len(n.Key)]) {
+				return nil, nil
+			}
+			tn = n.Val
+			key = key[len(n.Key):]
+		case *fullNode:
+			tn = n.Children[key[0]]
+			key = key[1:]
+		case hashNode:
+			return key, n
+		case nil:
+			return key, nil
+		case valueNode:
+			return nil, n
+		default:
+			panic(fmt.Sprintf("%T: invalid node: %v", tn, tn))
+		}
+	}
+}
+```
+
+### Security_trie.go Encrypted Trie
+In order to avoid the deliberate use of very long keys, the access time increases, security_trie wraps the trie tree, and all keys are converted to the hash value calculated by the keccak256 algorithm. At the same time, the original key corresponding to the hash value is stored in the database.
+
+
+```go
+type SecureTrie struct {
+	trie             Trie    
+	hashKeyBuf       [secureKeyLength]byte   
+	secKeyBuf        [200]byte               // The database prefix when the key corresponding to the hash value is stored
+	secKeyCache      map[string][]byte      
+	secKeyCacheOwner *SecureTrie // Pointer to self, replace the key cache on mismatch
+}
+
+func NewSecure(root common.Hash, db Database, cachelimit uint16) (*SecureTrie, error) {
+	if db == nil {
+		panic("NewSecure called with nil database")
+	}
+	trie, err := New(root, db)
+	if err != nil {
+		return nil, err
+	}
+	trie.SetCacheLimit(cachelimit)
+	return &SecureTrie{trie: *trie}, nil
+}
+
+// Get returns the value for key stored in the trie.
+// The value bytes must not be modified by the caller.
+func (t *SecureTrie) Get(key []byte) []byte {
+	res, err := t.TryGet(key)
+	if err != nil {
+		log.Error(fmt.Sprintf("Unhandled trie error: %v", err))
+	}
+	return res
+}
+
+// TryGet returns the value for key stored in the trie.
+// The value bytes must not be modified by the caller.
+// If a node was not found in the database, a MissingNodeError is returned.
+func (t *SecureTrie) TryGet(key []byte) ([]byte, error) {
+	return t.trie.TryGet(t.hashKey(key))
+}
+func (t *SecureTrie) CommitTo(db DatabaseWriter) (root common.Hash, err error) {
+	if len(t.getSecKeyCache()) > 0 {
+		for hk, key := range t.secKeyCache {
+			if err := db.Put(t.secKey([]byte(hk)), key); err != nil {
+				return common.Hash{}, err
 			}
 		}
+		t.secKeyCache = make(map[string][]byte)
 	}
-
-
-### security_trie.go 加密的Trie
-为了避免刻意使用很长的key导致访问时间的增加， security_trie包装了一下trie树， 所有的key都转换成keccak256算法计算的hash值。同时在数据库里面存储hash值对应的原始的key。
-
-	type SecureTrie struct {
-		trie             Trie    //原始的Trie树
-		hashKeyBuf       [secureKeyLength]byte   //计算hash值的buf
-		secKeyBuf        [200]byte               //hash值对应的key存储的时候的数据库前缀
-		secKeyCache      map[string][]byte      //记录hash值和对应的key的映射
-		secKeyCacheOwner *SecureTrie // Pointer to self, replace the key cache on mismatch
-	}
-
-	func NewSecure(root common.Hash, db Database, cachelimit uint16) (*SecureTrie, error) {
-		if db == nil {
-			panic("NewSecure called with nil database")
-		}
-		trie, err := New(root, db)
-		if err != nil {
-			return nil, err
-		}
-		trie.SetCacheLimit(cachelimit)
-		return &SecureTrie{trie: *trie}, nil
-	}
-	
-	// Get returns the value for key stored in the trie.
-	// The value bytes must not be modified by the caller.
-	func (t *SecureTrie) Get(key []byte) []byte {
-		res, err := t.TryGet(key)
-		if err != nil {
-			log.Error(fmt.Sprintf("Unhandled trie error: %v", err))
-		}
-		return res
-	}
-	
-	// TryGet returns the value for key stored in the trie.
-	// The value bytes must not be modified by the caller.
-	// If a node was not found in the database, a MissingNodeError is returned.
-	func (t *SecureTrie) TryGet(key []byte) ([]byte, error) {
-		return t.trie.TryGet(t.hashKey(key))
-	}
-	func (t *SecureTrie) CommitTo(db DatabaseWriter) (root common.Hash, err error) {
-		if len(t.getSecKeyCache()) > 0 {
-			for hk, key := range t.secKeyCache {
-				if err := db.Put(t.secKey([]byte(hk)), key); err != nil {
-					return common.Hash{}, err
-				}
-			}
-			t.secKeyCache = make(map[string][]byte)
-		}
-		return t.trie.CommitTo(db)
-	}
+	return t.trie.CommitTo(db)
+}
+```
