@@ -96,7 +96,7 @@ void insert(const char chars[], int len) {
 
 Can be implemented in a double array (Double-Array). The use of double arrays can greatly reduce memory usage
 
-![double](picture/double-array-trie.jp)
+![double](picture/double-array-trie.jpg)
 
 ## Usecases
 
