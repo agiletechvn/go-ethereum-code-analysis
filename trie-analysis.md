@@ -1,6 +1,6 @@
 The package trie implements Merkle Patricia Tries, which is referred to herein as MPT as a data structure. This data structure is actually a Trie tree variant. MPT is a very important data structure in Ethereum for storing user accounts. Status and its changes, transaction information, and receipt information for the transaction. MPT is actually a combination of three data structures: Trie, Patricia Trie, and Merkle. The three data structures are described separately below.
 
-## Trie tree (![introduction](trie-structure.md))
+## Trie tree ([introduction](trie-structure.md))
 The Trie tree, also known as the dictionary tree, word search tree or prefix tree, is a multi-fork tree structure for fast retrieval. For example, the dictionary tree of English letters is a 26-fork tree, and the digital dictionary tree is a 10-fork tree.  
 
 
