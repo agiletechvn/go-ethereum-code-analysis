@@ -64,9 +64,9 @@ The above is enough to verify a chain, but how do we update a dynamic list of si
   - Set the miner field **beneficiary** to the signer who wishes to vote
   - Set the **nonce** to 0 or 0xff ... f to vote for adding or kicking out
 
-Clients of any synchronization chain can "count" votes during block processing and maintain a dynamic list of authorized signers by ordinary voting. The initial set of signers is provided by the parameters of the creation block (to avoid the complexity of deploying the "initial voter list" contract in the initial state).
+Clients of any synchronization chain can "count" votes during block processing and maintain a dynamic list of authorized signers by ordinary voting. The initial set of signers is provided by the parameters of the genesis block (to avoid the complexity of deploying the "initial voter list" contract in the initial state).
 
-To avoid having an infinite window to count votes and to allow regular elimination of stale proposals, we can reuse ethash's concept epoch, and each epoch conversion will refresh all pending votes. In addition, these epoch conversions can also be used as stateless checkpoints that contain a list of currently authorized signers within the header's extra data. This allows the client to synchronize based only on the checkpoint hash without having to replay all the votes made on the chain. It also allows the complete definition of the blockchain with the creation block that contains the initial signer.
+To avoid having an infinite window to count votes and to allow regular elimination of stale proposals, we can reuse ethash's concept epoch, and each epoch conversion will refresh all pending votes. In addition, these epoch conversions can also be used as stateless checkpoints that contain a list of currently authorized signers within the header's extra data. This allows the client to synchronize based only on the checkpoint hash without having to replay all the votes made on the chain. It also allows the complete definition of the blockchain with the genesis block that contains the initial signer.
 
 ### Attack vector: malicious signer
 
@@ -128,7 +128,7 @@ We define the following constants:
 
 We also define the following constants for each block:
 
-- BLOCK_NUMBER：The height of the block in the chain. The height of the creation block is 0.
+- BLOCK_NUMBER：The height of the block in the chain. The height of the genesis block is 0.
 - SIGNER_COUNT：The number of authorized signers that are valid on a particular instance in the blockchain.
 - SIGNER_INDEX：The index in the sorted list of the current authorized signer.
 - SIGNER_LIMIT：Every so many blocks, the signer can only sign one. - There must be floor(SIGNER_COUNT / 2)+1 so many signers agree to reach a resolution.
@@ -177,7 +177,7 @@ As long as the signer meets the above specifications, they can authorize and ass
 
 ### Voting signer
 
-Each epoch conversion (including the creation block) acts as a stateless checkpoint, and capable clients should be able to synchronize without any previous state. This means that the new epoch header must not contain votes, all uncommitted votes will be discarded and counted from the beginning.
+Each epoch conversion (including the genesis block) acts as a stateless checkpoint, and capable clients should be able to synchronize without any previous state. This means that the new epoch header must not contain votes, all uncommitted votes will be discarded and counted from the beginning.
 
 For all non-epoch conversion blocks:
 

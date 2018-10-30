@@ -27,7 +27,7 @@ The process, I hope to start from the low-level technical components that rely o
   - **transaction pool management**
     - [transaction execution](/core-txlist-data-structure-analysis.md)
     - [transaction pool management](/core-txpool-analysis.md)
-  - [creation block](/core-genesis-analysis.md)
+  - [genesis block](/core-genesis-analysis.md)
   - [blockchain-analysis](/core-blockchain-analysis.md)
 - [miner analysis & CPU mining](/miner-analysis-CPU-mining.md)
 - [pow, poa, pos algorithms](/pow-analysis.md)

@@ -85,7 +85,7 @@ type BlockChain struct {
 	chainHeadFeed event.Feed
 	logsFeed      event.Feed
 	scope         event.SubscriptionScope
-	genesisBlock  *types.Block		// Creation block
+	genesisBlock  *types.Block		// genesis block
 
 	mu      sync.RWMutex // global mutex for locking chain operations
 	chainmu sync.RWMutex // blockchain insertion lock
@@ -149,7 +149,7 @@ func NewBlockChain(chainDb ethdb.Database, config *params.ChainConfig, engine co
 	if err != nil {
 		return nil, err
 	}
-	bc.genesisBlock = bc.GetBlockByNumber(0)  // get the creation block
+	bc.genesisBlock = bc.GetBlockByNumber(0)  // get the genesis block
 	if bc.genesisBlock == nil {
 		return nil, ErrNoGenesis
 	}
@@ -183,7 +183,7 @@ loadLastState, loads the latest blockchain state we know in the database. This m
 func (bc *BlockChain) loadLastState() error {
 	// Restore the last known head block
 	head := GetHeadBlockHash(bc.chainDb)
-	if head == (common.Hash{}) { // If the acquisition is empty, then the database is considered corrupted. Then set the blockchain to be the creation block.
+	if head == (common.Hash{}) { // If the acquisition is empty, then the database is considered corrupted. Then set the blockchain to be the genesis block.
 		// Corrupt or empty database, init from scratch
 		log.Warn("Empty database, resetting chain")
 		return bc.Reset()

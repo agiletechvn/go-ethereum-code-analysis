@@ -1,5 +1,5 @@
-Genesis is the content of the creation block. A blockchain is formed by rules from the same creation block. Different networks have different creation blocks, creation networks of the main network and test network. It is different.  
-This module sets the state of genesis based on the initial value of the incoming genesis and the database. If there is no creation block, create it in the database.
+Genesis is the content of the genesis block. A blockchain is formed by rules from the same genesis block. Different networks have different genesis blocks, creation networks of the main network and test network. It is different.  
+This module sets the state of genesis based on the initial value of the incoming genesis and the database. If there is no genesis block, create it in the database.
 data structure
 
 ```go
