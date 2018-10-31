@@ -1,21 +1,21 @@
-p2p的源码又下面几个包
+P2p source code and several packages below
 
-- discover 		包含了[Kademlia协议](references/Kademlia协议原理简介.pdf)。是基于UDP的p2p节点发现协议。
-- discv5		新的节点发现协议。 还是试验属性。本次分析没有涉及。
-- nat			网络地址转换的部分代码
-- netutil		一些工具
-- simulations	p2p网络的模拟。 本次分析没有涉及。
+- Discover contains the[Kademlia protocol](./references/Kademlia.pdf). It is a UDP-based p2p node discovery protocol.
+- Discv5: new node discovery protocol. Still a test proposal. This analysis is not covered.
+- Part of the code for nat network address translation
+- Netutil: some tools
+- Simulations simulation of p2p networks. This analysis is not covered.
 
-discover部分的源码分析
+Source code analysis of the discover package
 
-- [发现的节点的持久化存储 database.go](p2p-database.go源码分析.md)
-- [Kademlia协议的核心逻辑 tabel.go](p2p-table.go源码分析.md)
-- [UDP协议的处理逻辑udp.go](p2p-udp.go源码分析.md)
-- [网络地址转换 nat.go](p2p-nat源码分析.md)
+- [Discovered nodes for persistent storage database.go](p2p-database-analysis.md)
+- [The core logic of the Kademlia protocol is tabel.go](p2p-table-analysis.md)
+- [UDP protocol processing logic udp.go](p2p-udp-analysis.md)
+- [Network address translation nat.go](p2p-nat-analysis.md)
 
-p2p/ 部分源码分析
+p2p/ package source analysis
 
-- [节点之间的加密链路处理协议 rlpx.go](p2p-rlpx节点之间的加密链路.md)
-- [挑选节点然后进行连接的处理逻辑 dail.go](p2p-dial.go源码分析.md)
-- [节点和节点连接的处理以及协议的处理 peer.go](p2p-peer.go源码分析.md)
-- [p2p服务器的逻辑 server.go](p2p-server.go源码分析.md)
+- [Encrypted link processing protocol between nodes rlpx.go](p2p-rlpx-analysis.md)
+- [The processing logic to select nodes and then connect them.](p2p-dial-analysis.md)
+- [Processing of node and node connections and handling of protocols peer.go](p2p-peer-analysis.md)
+- [Logical server.go for p2p server](p2p-server-analysis.md)
