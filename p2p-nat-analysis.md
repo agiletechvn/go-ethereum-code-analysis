@@ -20,5 +20,6 @@ After the router establishes such a mapping relationship. Other programs on the 
 
 ![nat](/picture/nat-p2p.png)
 
-To have access to a node of the LAN network, we also need PAT  
+**To have access to a node of the LAN network, we also need PAT**
+
 ![nat](/picture/PAT.jpg)
