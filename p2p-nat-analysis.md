@@ -1,31 +1,24 @@
-nat是网络地址转换的意思。  这部分的源码比较独立而且单一，这里就暂时不分析了。 大家了解基本的功能就行了。
+Nat is the meaning of network address translation. This part of the source code is relatively independent and single, so I will not analyze it here. Everyone knows the basic functions.
 
-nat下面有upnp和pmp两种网络协议。 
+There are two network protocols, **upnp** and **pmp**, under **nat**.
 
-### upnp的应用场景(pmp是和upnp类似的协议)
+### Upnp application scenario (pmp is a protocol similar to upnp)
 
-如果用户是通过NAT接入Internet的，同时需要使用BC、电骡eMule等P2P这样的软件，这时UPnP功能就会带来很大的便利。利用UPnP能自动的把BC、电骡eMule等侦听的端口号映射到公网上，以便公网上的用户也能对NAT私网侧发起连接。
+If the user accesses the Internet through NAT and needs to use modules such as P2P, BC or eMule, the UPnP function will bring great convenience. UPnP can automatically map the port numbers of BC and eMule to the public network, so that users on the public network can also initiate connections to the private network side of the NAT.
 
+The main function is to provide an interface to map the IP + port of the intranet to the IP + port of the router. This is equivalent to the internal network's IP address of the external network, so that users of the public network can directly access you. Otherwise, you need to access it through UDP holes.
 
-主要功能就是提供接口可以把内网的IP+端口 映射为  路由器的IP+端口。 这样就等于内网的程序有了外网的IP地址， 这样公网的用户就可以直接对你进行访问了。 不然就需要通过UDP打洞这种方式来进行访问。
+### UDP protocol in p2p
 
+Most of the environments in which users run today are all intranet environments. The ports that are monitored in the intranet environment cannot be directly accessed by other public network programs. Need to go through a hole punching process. Both parties can connect. This is called UDP hole punching.
 
+network can not directly access the program on the intranet. Because the router does not know how to route data to this program on the intranet.
 
-### p2p中的UDP协议
+Then we first contact the program of the external network through the program of the intranet, so the router will automatically assign a port to the program on the intranet. And record a mapping 192.168.1.1:3003 -> 111.21.12.12:3003 in the router. This mapping will eventually disappear as time goes by.
 
-现在大部分用户运行的环境都是内网环境。 内网环境下监听的端口，其他公网的程序是无法直接访问的。需要经过一个打洞的过程。 双方才能联通。这就是所谓的UDP打洞。
+After the router establishes such a mapping relationship. Other programs on the Internet can be happy to access the port 111.21.12.12:3003. Because all data sent to this port will eventually be routed to the 192.168.1.1:3003 port. This is the so-called process of hole punching.
 
-![image](picture/nat_1.png)
-外网希望直接访问内网上的程序是无法实现的。 因为路由器并不知道如何路由数据给内网的这个程序。
+![nat](/picture/nat-p2p.png)
 
-那么我们首先通过内网的程序联系外网的程序，这样路由器就会自动给内网的这个程序分配一个端口。并在路由器里面记录一条映射 192.168.1.1:3003 -> 111.21.12.12:3003 。这个映射关系随着时间会老化最终消失。
-
-![image](picture/nat_2.png)
-
-等路由器建立这样的映射关系后。 互联网上的其他程序就可以快乐的访问111.21.12.12:3003这个端口了。因为所有送到这个端口的数据最终会被路由到192.168.1.1:3003这个端口。这就是所谓的打洞的过程。
-
-![image](picture/nat_3.png)
-
-
-
-
+To have access to a node of the LAN network, we also need PAT  
+![nat](/picture/PAT.jpg)

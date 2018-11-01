@@ -4,7 +4,7 @@ This PR aggregates a lot of small modifications to core, trie, eth and other pac
 
 This commit request contains minor modifications to core, trie, eth, and other packages to implement the fast synchronization algorithm for eth/63. In simple terms, geth --fast.
 
-## Algorithm 算法
+## Algorithm
 
 The goal of the the fast sync algorithm is to exchange processing power for bandwidth usage. Instead of processing the entire block-chain one link at a time, and replay all transactions that ever happened in history, fast syncing downloads the transaction receipts along the blocks, and pulls an entire recent state database. This allows a fast synced node to still retain its status an an archive node containing all historical data for user queries (and thus not influence the network's health in general), but at the same time to reassemble a recent network state at a fraction of the time it would take full block processing.
 
