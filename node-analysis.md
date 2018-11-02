@@ -1,7 +1,6 @@
-node 在 go ethereum 中代表了一个节点。 可能是全节点，可能是轻量级节点。 node 可以理解为一个进程，以太坊由运行在世界各地的很多中类型的 node 组成。
+Node represents a node in go ethereum. May be a full node, possibly a lightweight node. Node can be understood as a process, Ethereum consists of many types of nodes running around the world.
 
-一个典型的 node 就是一个 p2p 的节点。 运行了 p2p 网络协议，同时根据节点类型不同，运行了不同的业务层协议(以区别网络层协议。 参考 p2p peer 中的 Protocol 接口)。
-node 的结构。
+A typical node is a p2p node. The p2p network protocol is run, and different service layer protocols are run according to different node types (to distinguish the network layer protocol. Refer to the Protocol interface in the p2p peer). The structure of the node.
 
 ```go
 // Node is a container on which services can be registered.
@@ -40,7 +39,7 @@ type Node struct {
 }
 ```
 
-节点的初始化, 节点的初始化并不依赖其他的外部组件， 只依赖一个 Config 对象。
+The initialization of the node, the initialization of the node does not depend on other external components, only rely on a Config object.
 
 ```go
 // New creates a new P2P node, ready for protocol registration.
@@ -49,7 +48,7 @@ func New(conf *Config) (*Node, error) {
 	// working directory don't affect the node.
 	confCopy := *conf
 	conf = &confCopy
-	if conf.DataDir != "" {  //转化为绝对路径。
+	if conf.DataDir != "" {  // Convert to an absolute path.
 		absdatadir, err := filepath.Abs(conf.DataDir)
 		if err != nil {
 			return nil, err
@@ -88,10 +87,9 @@ func New(conf *Config) (*Node, error) {
 }
 ```
 
-### node 服务和协议的注册
+### Registration of node services and protocols
 
-因为 node 并没有负责具体的业务逻辑。所以具体的业务逻辑是通过注册的方式来注册到 node 里面来的。
-其他模块通过 Register 方法来注册了一个 服务构造函数。 使用这个服务构造函数可以生成服务。
+Because node is not responsible for the specific business logic. So the specific business logic is registered to the node through registration. Other modules register a service constructor via the Register method. Use this service constructor to generate a service.
 
 ```go
 // Register injects a new service into the node's stack. The service created by
@@ -108,7 +106,7 @@ func (n *Node) Register(constructor ServiceConstructor) error {
 }
 ```
 
-服务是什么
+What is the service?
 
 ```go
 type ServiceConstructor func(ctx *ServiceContext) (Service, error)
@@ -122,34 +120,27 @@ type ServiceConstructor func(ctx *ServiceContext) (Service, error)
 //
 // • Restart logic is not required as the node will create a fresh instance
 // every time a service is started.
-
-// 服务的生命周期管理已经代理给node管理。该服务允许在创建时自动初始化，但是在Start方法之外不应该启动goroutines。
-// 重新启动逻辑不是必需的，因为节点将在每次启动服务时创建一个新的实例。
 type Service interface {
 	// Protocols retrieves the P2P protocols the service wishes to start.
-	// 服务希望提供的p2p协议
 	Protocols() []p2p.Protocol
 
 	// APIs retrieves the list of RPC descriptors the service provides
-	// 服务希望提供的RPC方法的描述
 	APIs() []rpc.API
 
 	// Start is called after all services have been constructed and the networking
 	// layer was also initialized to spawn any goroutines required by the service.
-	// 所有服务已经构建完成后，调用开始，并且网络层也被初始化以产生服务所需的任何goroutine。
 	Start(server *p2p.Server) error
 
 	// Stop terminates all goroutines belonging to the service, blocking until they
 	// are all terminated.
 
-	// Stop方法会停止这个服务拥有的所有goroutine。 需要阻塞到所有的goroutine都已经终止
 	Stop() error
 }
 ```
 
-### node 的启动
+### Node startup
 
-node 的启动过程会创建和运行一个 p2p 的节点。
+The node startup process creates and runs a p2p node.
 
 ```go
 // Start create a live P2P node and starts running it.
@@ -171,17 +162,17 @@ func (n *Node) Start() error {
 	n.serverConfig.PrivateKey = n.config.NodeKey()
 	n.serverConfig.Name = n.config.NodeName()
 	if n.serverConfig.StaticNodes == nil {
-		// 处理配置文件static-nodes.json
+		// Processing configuration file static-nodes.json
 		n.serverConfig.StaticNodes = n.config.StaticNodes()
 	}
 	if n.serverConfig.TrustedNodes == nil {
-		// 处理配置文件trusted-nodes.json
+		// Processing configuration file trusted-nodes.json
 		n.serverConfig.TrustedNodes = n.config.TrustedNodes()
 	}
 	if n.serverConfig.NodeDatabase == "" {
 		n.serverConfig.NodeDatabase = n.config.NodeDB()
 	}
-	//创建了p2p服务器
+	// Created a p2p server
 	running := &p2p.Server{Config: n.serverConfig}
 	log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
 
@@ -199,7 +190,6 @@ func (n *Node) Start() error {
 			ctx.services[kind] = s
 		}
 		// Construct and save the service
-		// 创建所有注册的服务。
 		service, err := constructor(ctx)
 		if err != nil {
 			return err
@@ -211,16 +201,14 @@ func (n *Node) Start() error {
 		services[kind] = service
 	}
 	// Gather the protocols and start the freshly assembled P2P server
-	// 收集所有的p2p的protocols并插入p2p.Rrotocols
 	for _, service := range services {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
 	}
-	// 启动了p2p服务器
+	// Start the p2p server
 	if err := running.Start(); err != nil {
 		return convertFileLockError(err)
 	}
 	// Start each of the services
-	// 启动每一个服务
 	started := []reflect.Type{}
 	for kind, service := range services {
 		// Start the next service, stopping all previous upon failure
@@ -236,7 +224,6 @@ func (n *Node) Start() error {
 		started = append(started, kind)
 	}
 	// Lastly start the configured RPC interfaces
-	// 最后启动RPC服务
 	if err := n.startRPC(services); err != nil {
 		for _, service := range services {
 			service.Stop()
@@ -253,7 +240,7 @@ func (n *Node) Start() error {
 }
 ```
 
-startRPC,这个方法收集所有的 apis。 并依次调用启动各个 RPC 服务器， 默认是启动 InProc 和 IPC。 如果指定也可以配置是否启动 HTTP 和 websocket。
+startRPC, this method collects all apis. And in turn call to start each RPC server, the default is to start InProc and IPC. If specified, you can also configure whether to start HTTP and websocket.
 
 ```go
 // startRPC is a helper method to start all the various RPC endpoint during node
@@ -290,14 +277,13 @@ func (n *Node) startRPC(services map[reflect.Type]Service) error {
 }
 ```
 
-startXXX 是具体的 RPC 的启动，流程都是大同小异。在 v1.8.12 版本中 node\node.go 文件中 startIPC()、startHTTP()、startWS()三个方法的具体启动方式封装到 rpc\endpoints.go 文件对应函数中
+startXXX is the start of a specific RPC, and the process is similar. In the v1.8.12 version, the specific startup methods of startIPC(), startHTTP(), and startWS() in the `node\node.go` file are encapsulated into the corresponding function of the `rpc\endpoints.go` file.
 
 ```go
 // StartWSEndpoint starts a websocket endpoint
 func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []string, exposeAll bool) (net.Listener, *Server, error) {
 
 	// Generate the whitelist based on the allowed modules
-	// 生成白名单
 	whitelist := make(map[string]bool)
 	for _, module := range modules {
 		whitelist[module] = true
@@ -305,7 +291,7 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 	// Register all the APIs exposed by the services
 	handler := NewServer()
 	for _, api := range apis {
-		if exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {		// 只有这几种情况下才会把这个api进行注册。
+		if exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {		// This api will only be registered in these cases.
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return nil, nil, err
 			}
@@ -313,7 +299,6 @@ func StartWSEndpoint(endpoint string, apis []API, modules []string, wsOrigins []
 		}
 	}
 	// All APIs registered, start the HTTP listener
-	// 所有 APIs 都已经注册，启动 HTTP 监听器
 	var (
 		listener net.Listener
 		err      error

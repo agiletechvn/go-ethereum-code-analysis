@@ -1,20 +1,20 @@
 ## agent
 
-agent 是具体执行挖矿的对象。 它执行的流程就是，接受计算好了的区块头， 计算 mixhash 和 nonce， 把挖矿好的区块头返回。
+The agent is the object of specific mining. The process it performs is to accept the calculated block header, calculate the mixhash and nonce, and return the mined block header.
 
-构造 CpuAgent, 一般情况下不会使用 CPU 来进行挖矿，一般来说挖矿都是使用的专门的 GPU 进行挖矿， GPU 挖矿的代码不会在这里体现。
+The CpuAgent is constructed. Generally, the CPU is not used for mining. Generally, mining is performed using a dedicated GPU for mining. The code for GPU mining will not be reflected here.
 
 ```go
 type CpuAgent struct {
 	mu sync.Mutex
 
-	workCh        chan *Work       // 接受挖矿任务的通道
+	workCh        chan *Work       // Accepting the channel for mining tasks
 	stop          chan struct{}
 	quitCurrentOp chan struct{}
-	returnCh      chan<- *Result   // 挖矿完成后的返回channel
+	returnCh      chan<- *Result   // Return channel after mining completion
 
-	chain  consensus.ChainReader // 获取区块链的信息
-	engine consensus.Engine      // 一致性引擎，这里指的是Pow引擎
+	chain  consensus.ChainReader // Get blockchain information
+	engine consensus.Engine      // Consensus engine, here refers to the Pow engine
 
 	isMining int32 // isMining indicates whether the agent is currently mining
 }
@@ -30,15 +30,14 @@ func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine) *CpuAgent
 }
 ```
 
-设置返回值 channel 和得到 Work 的 channel， 方便外界传值和得到返回信息。
+Set the return value channel and get the Work channel to facilitate the external value and get the return information.
 
 ```go
 func (self *CpuAgent) Work() chan<- *Work            { return self.workCh }
 func (self *CpuAgent) SetReturnCh(ch chan<- *Result) { self.returnCh = ch }
 ```
 
-启动和消息循环，如果已经启动挖矿，那么直接退出， 否则启动 update 这个 goroutine
-update 从 workCh 接受任务，进行挖矿，或者是接受退出信息，退出。
+Start and message loop, if you have started mining, then exit directly, otherwise start update goroutine update accept tasks from workCh, mine, or accept exit information, exit.
 
 ```go
 func (self *CpuAgent) Start() {
@@ -73,7 +72,7 @@ out:
 }
 ```
 
-mine, 挖矿，调用一致性引擎进行挖矿， 如果挖矿成功，把消息发送到 returnCh 上面。
+Mine, mining, call the consistency engine for mining, if the mining is successful, send the message to returnCh.
 
 ```go
 func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
@@ -89,7 +88,7 @@ func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
 }
 ```
 
-GetHashRate， 这个函数返回当前的 HashRate。
+GetHashRate, this function returns the current HashRate.
 
 ```go
 func (self *CpuAgent) GetHashRate() int64 {
@@ -102,25 +101,25 @@ func (self *CpuAgent) GetHashRate() int64 {
 
 ## remote_agent
 
-remote_agent 提供了一套 RPC 接口，可以实现远程矿工进行采矿的功能。 比如我有一个矿机，矿机内部没有运行以太坊节点，矿机首先从 remote_agent 获取当前的任务，然后进行挖矿计算，当挖矿完成后，提交计算结果，完成挖矿。
+Remote_agent provides a set of RPC interfaces that enable remote miners to perform mining functions. For example, I have a mining machine. The inside of the mining machine does not run the Ethereum node. The mining machine first obtains the current task from remote_agent, and then performs mining calculation. When the mining is completed, the calculation result is submitted and the mining is completed.
 
-数据结构和构造
+Data structure and construction
 
 ```go
 type RemoteAgent struct {
 	mu sync.Mutex
 
 	quitCh   chan struct{}
-	workCh   chan *Work  		// 接受任务
-	returnCh chan<- *Result		// 结果返回
+	workCh   chan *Work  		// accept the task
+	returnCh chan<- *Result		// Result return
 
 	chain       consensus.ChainReader
 	engine      consensus.Engine
-	currentWork *Work	//当前的任务
-	work        map[common.Hash]*Work // 当前还没有提交的任务，正在计算
+	currentWork *Work	// Current task
+	work        map[common.Hash]*Work // Tasks that have not yet been submitted, are being calculated
 
 	hashrateMu sync.RWMutex
-	hashrate   map[common.Hash]hashrate  // 正在计算的任务的hashrate
+	hashrate   map[common.Hash]hashrate  // Hashrate of the task being calculated
 
 	running int32 // running indicates whether the agent is active. Call atomically
 }
@@ -135,7 +134,7 @@ func NewRemoteAgent(chain consensus.ChainReader, engine consensus.Engine) *Remot
 }
 ```
 
-启动和停止
+Start and stop
 
 ```go
 func (a *RemoteAgent) Start() {
@@ -156,7 +155,7 @@ func (a *RemoteAgent) Stop() {
 }
 ```
 
-得到输入输出的 channel，这个和 agent.go 一样。
+Get the input and output channels, this is the same as agent.go.
 
 ```go
 func (a *RemoteAgent) Work() chan<- *Work {
@@ -168,7 +167,7 @@ func (a *RemoteAgent) SetReturnCh(returnCh chan<- *Result) {
 }
 ```
 
-loop 方法,和 agent.go 里面做的工作比较类似， 当接收到任务的时候，就存放在 currentWork 字段里面。 如果 84 秒还没有完成一个工作，那么就删除这个工作， 如果 10 秒没有收到 hashrate 的报告，那么删除这个追踪/。
+The loop method is similar to the work done in agent.go. When the task is received, it is stored in the currentWork field. If you haven't completed a job in 84 seconds, then delete the job. If you haven't received the hashrate report for 10 seconds, delete the trace/.
 
 ```go
 // loop monitors mining events on the work and quit channels, updating the internal
@@ -211,7 +210,7 @@ func (a *RemoteAgent) loop(workCh chan *Work, quitCh chan struct{}) {
 }
 ```
 
-GetWork，这个方法由远程矿工调用，获取当前的挖矿任务。
+GetWork, this method is called by a remote miner to get the current mining task.
 
 ```go
 func (a *RemoteAgent) GetWork() ([3]string, error) {
@@ -240,7 +239,7 @@ func (a *RemoteAgent) GetWork() ([3]string, error) {
 }
 ```
 
-SubmitWork, 远程矿工会调用这个方法提交挖矿的结果。 对结果进行验证之后提交到 returnCh
+SubmitWork, the remote miners call this method to submit the results of the mining. Submit the result to returnCh after verifying the result
 
 ```go
 // SubmitWork tries to inject a pow solution into the remote agent, returning
@@ -275,7 +274,7 @@ func (a *RemoteAgent) SubmitWork(nonce types.BlockNonce, mixDigest, hash common.
 }
 ```
 
-SubmitHashrate, 提交 hash 算力
+SubmitHashrate, submit hash power
 
 ```go
 func (a *RemoteAgent) SubmitHashrate(id common.Hash, rate uint64) {
@@ -288,14 +287,13 @@ func (a *RemoteAgent) SubmitHashrate(id common.Hash, rate uint64) {
 
 ## unconfirmed
 
-unconfirmed 是一个数据结构，用来跟踪用户本地的挖矿信息的，比如挖出了一个块，那么等待足够的后续区块确认之后(5 个)，再查看本地挖矿的区块是否包含在规范的区块链内部。
+Unconfirmed is a data structure used to track the user's local mining information, such as dug out a block, then wait for enough subsequent block confirmation (5), then check whether the local mining block is included in the specification. Inside the blockchain.
 
-数据结构
+Data structure
 
 ```go
 // headerRetriever is used by the unconfirmed block set to verify whether a previously
 // mined block is part of the canonical chain or not.
-// headerRetriever由未确认的块组使用，以验证先前挖掘的块是否是规范链的一部分。
 type headerRetriever interface {
 	// GetHeaderByNumber retrieves the canonical header associated with a block number.
 	GetHeaderByNumber(number uint64) *types.Header
@@ -303,7 +301,6 @@ type headerRetriever interface {
 
 // unconfirmedBlock is a small collection of metadata about a locally mined block
 // that is placed into a unconfirmed set for canonical chain inclusion tracking.
-// unconfirmedBlock 是本地挖掘区块的一个小的元数据的集合，用来放入未确认的集合用来追踪本地挖掘的区块是否被包含进入规范的区块链
 type unconfirmedBlock struct {
 	index uint64
 	hash  common.Hash
@@ -313,11 +310,10 @@ type unconfirmedBlock struct {
 // have have not yet reached enough maturity to guarantee chain inclusion. It is
 // used by the miner to provide logs to the user when a previously mined block
 // has a high enough guarantee to not be reorged out of te canonical chain.
-// unconfirmedBlocks 实现了一个数据结构，用来管理本地挖掘的区块，这些区块还没有达到足够的信任度来证明他们已经被规范的区块链接受。 它用来给矿工提供信息，以便他们了解他们之前挖到的区块是否被包含进入了规范的区块链。
 type unconfirmedBlocks struct {
-	chain  headerRetriever // Blockchain to verify canonical status through 需要验证的区块链 用这个接口来获取当前的规范的区块头信息
-	depth  uint            // Depth after which to discard previous blocks 经过多少个区块之后丢弃之前的区块
-	blocks *ring.Ring      // Block infos to allow canonical chain cross checks // 区块信息，以允许规范链交叉检查
+	chain  headerRetriever // Blockchain to verify canonical status through
+	depth  uint            // Depth after which to discard previous blocks
+	blocks *ring.Ring      // Block infos to allow canonical chain cross checks
 	lock   sync.RWMutex    // Protects the fields from concurrent access
 }
 
@@ -330,17 +326,15 @@ func newUnconfirmedBlocks(chain headerRetriever, depth uint) *unconfirmedBlocks 
 }
 ```
 
-插入跟踪区块, 当矿工挖到一个区块的时候调用， index 是区块的高度， hash 是区块的 hash 值。
+Insert the tracking block, when the miner digs into a block, index is the height of the block, and hash is the hash value of the block.
 
 ```go
 // Insert adds a new block to the set of unconfirmed ones.
 func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
 	// If a new block was mined locally, shift out any old enough blocks
-	// 如果一个本地的区块挖到了，那么移出已经超过depth的区块
 	set.Shift(index)
 
 	// Create the new item as its own ring
-	// 循环队列的操作。
 	item := ring.New(1)
 	item.Value = &unconfirmedBlock{
 		index: index,
@@ -353,7 +347,7 @@ func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
 	if set.blocks == nil {
 		set.blocks = item
 	} else {
-		// 移动到循环队列的最后一个元素插入item
+		// Move to the last element of the loop queue to insert the item
 		set.blocks.Move(-1).Link(item)
 	}
 	// Display a log for the user to notify of a new mined block unconfirmed
@@ -361,7 +355,7 @@ func (set *unconfirmedBlocks) Insert(index uint64, hash common.Hash) {
 }
 ```
 
-Shift 方法会删除那些 index 超过传入的 index-depth 的区块，并检查他们是否在规范的区块链中。
+The Shift method removes blocks whose index exceeds the passed index-depth and checks if they are in the canonical blockchain.
 
 ```go
 // Shift drops all unconfirmed blocks from the set which exceed the unconfirmed sets depth
@@ -373,30 +367,30 @@ func (set *unconfirmedBlocks) Shift(height uint64) {
 
 	for set.blocks != nil {
 		// Retrieve the next unconfirmed block and abort if too fresh
-		// 因为blocks中的区块都是按顺序排列的。排在最开始的肯定是最老的区块。
-		// 所以每次只需要检查最开始的那个区块，如果处理完了，就从循环队列里面摘除。
+		// Because the blocks in blocks are arranged in order. At the very beginning, it is definitely the oldest block.
+		// So only need to check the last block at a time, if it is finished, it will be removed from the loop queue.
 		next := set.blocks.Value.(*unconfirmedBlock)
-		if next.index+uint64(set.depth) > height { // 如果足够老了。
+		if next.index+uint64(set.depth) > height { // If it is old enough.
 			break
 		}
 		// Block seems to exceed depth allowance, check for canonical status
-		// 查询 那个区块高度的区块头
+		// Query the block header of that block height
 		header := set.chain.GetHeaderByNumber(next.index)
 		switch {
 		case header == nil:
 			log.Warn("Failed to retrieve header of mined block", "number", next.index, "hash", next.hash)
-		case header.Hash() == next.hash: // 如果区块头就等于我们自己，
+		case header.Hash() == next.hash: // If the block header is equal to ourselves,
 			log.Info("🔗 block reached canonical chain", "number", next.index, "hash", next.hash)
-		default: // 否则说明我们在侧链上面。
+		default: // Otherwise we are above the side chain.
 			log.Info("⑂ block  became a side fork", "number", next.index, "hash", next.hash)
 		}
 		// Drop the block out of the ring
-		// 从循环队列删除
+		// Delete from the loop queue
 		if set.blocks.Value == set.blocks.Next().Value {
-			// 如果当前的值就等于我们自己，说明只有循环队列只有一个元素，那么设置未nil
+			// If the current value is equal to our own, indicating that only the loop queue has only one element, then the setting is not nil
 			set.blocks = nil
 		} else {
-			// 否则移动到最后，然后删除一个，再移动到最前。
+			// Otherwise move to the end, then delete one and move to the front.
 			set.blocks = set.blocks.Move(-1)
 			set.blocks.Unlink(1)
 			set.blocks = set.blocks.Move(1)
@@ -407,11 +401,11 @@ func (set *unconfirmedBlocks) Shift(height uint64) {
 
 ## worker.go
 
-worker 内部包含了很多 agent，可以包含之前提到的 agent 和 remote_agent。 worker 同时负责构建区块和对象。同时把任务提供给 agent。
+The worker contains a lot of agents, including the agent and remote_agent mentioned earlier. The worker is also responsible for building blocks and objects. At the same time, the task is provided to the agent.
 
-数据结构：
+Data structure:
 
-Agent 接口
+Agent interface
 
 ```go
 // Agent can register themself with the worker
@@ -424,31 +418,31 @@ type Agent interface {
 }
 ```
 
-Work 结构，Work 存储了工作者的当时的环境，并且持有所有的暂时的状态信息。
+Work structure, Work stores the worker's current environment and holds all temporary status information.
 
 ```go
 // Work is the workers current environment and holds
 // all of the current state information
 type Work struct {
 	config *params.ChainConfig
-	signer types.Signer			// 签名者
+	signer types.Signer			// Signer
 
-	state     *state.StateDB // apply state changes here 状态数据库
-	ancestors *set.Set       // ancestor set (used for checking uncle parent validity)  祖先集合，用来检查祖先是否有效
-	family    *set.Set       // family set (used for checking uncle invalidity) 家族集合，用来检查祖先的无效性
-	uncles    *set.Set       // uncle set  uncles集合
-	tcount    int            // tx count in cycle 这个周期的交易数量
+	state     *state.StateDB // apply state changes here
+	ancestors *set.Set       // ancestor set (used for checking uncle parent validity)
+	family    *set.Set       // family set (used for checking uncle invalidity)
+	uncles    *set.Set       // uncle set
+	tcount    int            // tx count in cycle
 
-	Block *types.Block // the new block  //新的区块
+	Block *types.Block // the new block
 
-	header   *types.Header			// 区块头
-	txs      []*types.Transaction   // 交易
-	receipts []*types.Receipt  		// 收据
+	header   *types.Header			// Block head
+	txs      []*types.Transaction   // transaction
+	receipts []*types.Receipt  		// receipt
 
-	createdAt time.Time 			// 创建时间
+	createdAt time.Time 			// creation time
 }
 
-type Result struct {  //结果
+type Result struct {
 	Work  *Work
 	Block *types.Block
 }
@@ -458,41 +452,40 @@ worker
 
 ```go
 // worker is the main object which takes care of applying messages to the new state
-// 工作者是负责将消息应用到新状态的主要对象
 type worker struct {
 	config *params.ChainConfig
 	engine consensus.Engine
 	mu sync.Mutex
 	// update loop
 	mux          *event.TypeMux
-	txCh         chan core.TxPreEvent		// 用来接受txPool里面的交易的通道
-	txSub        event.Subscription			// 用来接受txPool里面的交易的订阅器
-	chainHeadCh  chan core.ChainHeadEvent	// 用来接受区块头的通道
+	txCh         chan core.TxPreEvent		// Channel used to accept transactions in txPool
+	txSub        event.Subscription			// Subscriber for accepting transactions in txPool
+	chainHeadCh  chan core.ChainHeadEvent	// Channel used to accept the block header
 	chainHeadSub event.Subscription
-	chainSideCh  chan core.ChainSideEvent	// 用来接受一个区块链从规范区块链移出的通道
+	chainSideCh  chan core.ChainSideEvent	// Channel used to accept a blockchain removed from the canonical blockchain
 	chainSideSub event.Subscription
 	wg           sync.WaitGroup
 
-	agents map[Agent]struct{}				// 所有的agent
-	recv   chan *Result						// agent会把结果发送到这个通道
+	agents map[Agent]struct{}				// All agents
+	recv   chan *Result						// Agent will send the result to this channel
 
-	eth     Backend							// eth的协议
-	chain   *core.BlockChain				// 区块链
-	proc    core.Validator					// 区块链验证器
-	chainDb ethdb.Database					// 区块链数据库
+	eth     Backend							// Eth consensus
+	chain   *core.BlockChain
+	proc    core.Validator					// blockchain validator
+	chainDb ethdb.Database					// blockchain database
 
-	coinbase common.Address					// 挖矿者的地址
+	coinbase common.Address					// Miner's address
 	extra    []byte							//
 
-	snapshotMu    sync.RWMutex				// 快照 RWMutex（快照读写锁）
-	snapshotBlock *types.Block				// 快照 Block
-	snapshotState *state.StateDB				// 快照 StateDB
+	snapshotMu    sync.RWMutex				// Snapshot RWMutex (snapshot read and write lock)
+	snapshotBlock *types.Block
+	snapshotState *state.StateDB
 
 	currentMu sync.Mutex
 	current   *Work
 
 	uncleMu        sync.Mutex
-	possibleUncles map[common.Hash]*types.Block	//可能的叔父节点
+	possibleUncles map[common.Hash]*types.Block
 
 	unconfirmed *unconfirmedBlocks // set of locally mined blocks pending canonicalness confirmations
 
@@ -502,7 +495,7 @@ type worker struct {
 }
 ```
 
-构造
+structure
 
 ```go
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
@@ -548,20 +541,20 @@ func (self *worker) update() {
 	for {
 		// A real event arrived, process interesting content
 		select {
-		// Handle ChainHeadEvent 当接收到一个区块头的信息的时候，马上开启挖矿服务。
+		// Handle ChainHeadEvent When receiving the information of a block header, the mining service is started immediately.
 		case <-self.chainHeadCh:
 			self.commitNewWork()
 
-		// Handle ChainSideEvent 接收不在规范的区块链的区块，加入到潜在的叔父集合
+		// Handle ChainSideEvent Receive blocks that are not in the canonical blockchain and join the potential uncle collection
 		case ev := <-self.chainSideCh:
 			self.uncleMu.Lock()
 			self.possibleUncles[ev.Block.Hash()] = ev.Block
 			self.uncleMu.Unlock()
 
-		// Handle TxPreEvent 接收到txPool里面的交易信息的时候。
+		// Handle TxPreEvent When receiving the transaction information in txPool.
 		case ev := <-self.txCh:
 			// Apply transaction to the pending state if we're not mining
-			// 如果当前没有挖矿， 那么把交易应用到当前的状态上，以便马上开启挖矿任务。
+			// If there is currently no mining, then apply the transaction to the current state so that the mining task can be started immediately.
 			if atomic.LoadInt32(&self.mining) == 0 {
 				self.currentMu.Lock()
 				acc, _ := types.Sender(self.current.signer, ev.Tx)
@@ -584,7 +577,7 @@ func (self *worker) update() {
 }
 ```
 
-commitNewWork 提交新的任务
+commitNewWork submits a new task
 
 ```go
 func (self *worker) commitNewWork() {
@@ -599,12 +592,12 @@ func (self *worker) commitNewWork() {
 	parent := self.chain.CurrentBlock()
 
 	tstamp := tstart.Unix()
-	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 { // 不能出现比parent的时间还少的情况
+	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 { // can't appear less than the time of the parent
 		tstamp = parent.Time().Int64() + 1
 	}
 	// this will ensure we're not going off too far in the future
-	// 我们的时间不要超过现在的时间太远， 那么等待一段时间，
-	// 感觉这个功能完全是为了测试实现的， 如果是真实的挖矿程序，应该不会等待。
+	// Our time should not be too far away from the present time, then wait for a while,
+	// I feel that this function is completely for testing. If it is a real mining program, it should not wait.
 	if now := time.Now().Unix(); tstamp > now+1 {
 		wait := time.Duration(tstamp-now) * time.Second
 		log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
@@ -621,7 +614,6 @@ func (self *worker) commitNewWork() {
 		Time:       big.NewInt(tstamp),
 	}
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
-	// 只有当我们挖矿的时候才设置coinbase(避免虚假的块奖励？ TODO 没懂)
 	if atomic.LoadInt32(&self.mining) == 1 {
 		header.Coinbase = self.coinbase
 	}
@@ -630,22 +622,21 @@ func (self *worker) commitNewWork() {
 		return
 	}
 	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
-	// 根据我们是否关心DAO硬分叉来决定是否覆盖额外的数据。
 	if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
 		// Check whether the block is among the fork extra-override range
-		// 检查区块是否在 DAO硬分叉的范围内   [daoblock,daoblock+limit]
+		// Check if the block is within the range of DAO hard fork  [daoblock,daoblock+limit]
 		limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
 		if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
 			// Depending whether we support or oppose the fork, override differently
-			if self.config.DAOForkSupport { // 如果我们支持DAO 那么设置保留的额外的数据
+			if self.config.DAOForkSupport { // If we support DAO then set the reserved extra data
 				header.Extra = common.CopyBytes(params.DAOForkBlockExtra)
 			} else if bytes.Equal(header.Extra, params.DAOForkBlockExtra) {
-				header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data // 否则不使用保留的额外数据
+				header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
 			}
 		}
 	}
 	// Could potentially happen if starting to mine in an odd state.
-	err := self.makeCurrent(parent, header) // 用新的区块头来设置当前的状态
+	err := self.makeCurrent(parent, header) // Use the new block header to set the current state
 	if err != nil {
 		log.Error("Failed to create mining context", "err", err)
 		return
@@ -653,16 +644,16 @@ func (self *worker) commitNewWork() {
 	// Create the current work task and check any fork transitions needed
 	work := self.current
 	if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
-		misc.ApplyDAOHardFork(work.state)  // 把DAO里面的资金转移到指定的账户。
+		misc.ApplyDAOHardFork(work.state)  // Transfer funds from the DAO to the designated account.
 	}
-	pending, err := self.eth.TxPool().Pending() //得到阻塞的资金
+	pending, err := self.eth.TxPool().Pending() // Obstructed funds
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
-	// 创建交易。 这个方法后续介绍
+	// Create a transaction. Follow-up of this method
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
-	// 提交交易 这个方法后续介绍
+	// Submit a transaction
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
 	// compute uncles for the new block.
@@ -688,7 +679,7 @@ func (self *worker) commitNewWork() {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	// 使用给定的状态来创建新的区块，Finalize会进行区块奖励等操作
+	// Use the given state to create a new block, Finalize will perform block rewards, etc.
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
@@ -703,7 +694,7 @@ func (self *worker) commitNewWork() {
 }
 ```
 
-push 方法，如果我们没有在挖矿，那么直接返回，否则把任务送给每一个 agent
+Push method, if we are not mining, then return directly, otherwise give the task to each agent
 
 ```go
 // push sends a new work task to currently live miner agents.
@@ -720,7 +711,7 @@ func (self *worker) push(work *Work) {
 }
 ```
 
-makeCurrent，未当前的周期创建一个新的环境。
+makeCurrent, creating a new environment without the current cycle.
 
 ```go
 // makeCurrent creates a new environment for the current cycle.
@@ -761,7 +752,7 @@ commitTransactions
 
 ```go
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
-	// 由于是打包新的区块中交易，所以将总 gasPool 初始化为 env.header.GasLimit
+	// Initialize the total gasPool to env.header.GasLimit because it is a new block in the package
 	if env.gasPool == nil {
 		env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
 	}
@@ -770,14 +761,13 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 	for {
 		// If we don't have enough gas for any further transactions then we're done
-		// 如果当前区块中所有 Gas 消耗已经使用完，则退出打包交易
+		// Exit the packaged transaction if all Gas consumption in the current block has been used up
 		if env.gasPool.Gas() < params.TxGas {
 			log.Trace("Not enough gas for further transactions", "have", env.gasPool, "want", params.TxGas)
 			break
 		}
 
 		// Retrieve the next transaction and abort if all done
-		// 检索下一笔交易，如果交易集合为空则退出 commit
 		tx := txs.Peek()
 		if tx == nil {
 			break
@@ -789,9 +779,9 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		from, _ := types.Sender(env.signer, tx)
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
-		// 请参考 https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md
-		// DAO事件发生后，以太坊分裂为ETH和ETC,因为两个链上的东西一摸一样，所以在ETC
-		// 上面发生的交易可以拿到ETH上面进行重放， 反之亦然。 所以Vitalik提出了EIP155来避免这种情况。
+		// Please refer to https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md
+		// After the DAO event, Ethereum splits into ETH and ETC, because the things on the two chains are the same, so at ETC
+		// The transaction that occurred above can be retrieved on ETH and vice versa. So Vitalik proposed EIP155 to avoid this situation.
 		if tx.Protected() && !env.config.IsEIP155(env.header.Number) {
 			log.Trace("Ignoring reply protected transaction", "hash", tx.Hash(), "eip155", env.config.EIP155Block)
 
@@ -800,24 +790,21 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}
 		// Start executing the transaction
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
-		// 执行交易
+		// execute the transaction
 		err, logs := env.commitTransaction(tx, bc, coinbase, gp)
 		switch err {
 		case core.ErrGasLimitReached:
 			// Pop the current out-of-gas transaction without shifting in the next from the account
-			// 弹出整个账户的所有交易， 不处理用户的下一个交易。
 			log.Trace("Gas limit exceeded for current block", "sender", from)
 			txs.Pop()
 
 		case core.ErrNonceTooLow:
 			// New head notification data race between the transaction pool and miner, shift
-			// 移动到用户的下一个交易
 			log.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Shift()
 
 		case core.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
-			// 跳过这个账户
 			log.Trace("Skipping account with hight nonce", "sender", from, "nonce", tx.Nonce())
 			txs.Pop()
 
@@ -830,7 +817,6 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
-			// 其他奇怪的错误，跳过这个交易。
 			log.Debug("Transaction failed, account skipped", "hash", tx.Hash(), "err", err)
 			txs.Shift()
 		}
@@ -840,7 +826,6 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
 		// logs by filling in the block hash when the block was mined by the local miner. This can
 		// cause a race condition if a log was "upgraded" before the PendingLogsEvent is processed.
-		// 因为需要把log发送出去，而这边在挖矿完成后需要对log进行修改，所以拷贝一份发送出去，避免争用。
 		cpy := make([]*types.Log, len(coalescedLogs))
 		for i, l := range coalescedLogs {
 			cpy[i] = new(types.Log)
@@ -858,7 +843,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 ```
 
-commitTransaction 执行 ApplyTransaction
+commitTransaction execute ApplyTransaction
 
 ```go
 func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
@@ -876,7 +861,7 @@ func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, c
 }
 ```
 
-wait 函数用来接受挖矿的结果然后写入本地区块链，同时通过 eth 协议广播出去。
+The wait function is used to accept the results of the mining and then write to the local blockchain and broadcast it through the eth protocol.
 
 ```go
 func (self *worker) wait() {
@@ -907,13 +892,12 @@ func (self *worker) wait() {
 				continue
 			}
 			// check if canon block and write transactions
-			if stat == core.CanonStatTy { // 说明已经插入到规范的区块链
+			if stat == core.CanonStatTy { // Description Blockchain that has been inserted into the specification
 				// implicit by posting ChainHeadEvent
-				// 因为这种状态下，会发送ChainHeadEvent，会触发上面的update里面的代码，这部分代码会commitNewWork，所以在这里就不需要commit了。
+				// Because in this state, will send ChainHeadEvent, will trigger the code inside the update, this part of the code will commitNewWork, so there is no need to commit here.
 				mustCommitNewWork = false
 			}
 			// Broadcast the block and announce chain insertion event
-			// 广播区块，并且申明区块链插入事件。
 			self.mux.Post(core.NewMinedBlockEvent{Block: block})
 			var (
 				events []interface{}
@@ -926,10 +910,9 @@ func (self *worker) wait() {
 			self.chain.PostChainEvents(events, logs)
 
 			// Insert the block into the set of pending ones to wait for confirmations
-			// 插入本地跟踪列表， 查看后续的确认状态。
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
-			if mustCommitNewWork { // TODO ?
+			if mustCommitNewWork {
 				self.commitNewWork()
 			}
 		}
@@ -939,9 +922,9 @@ func (self *worker) wait() {
 
 ## miner
 
-miner 用来对 worker 进行管理， 订阅外部事件，控制 worker 的启动和停止。
+Miner is used to manage workers, subscribe to external events, and control the start and stop of workers.
 
-数据结构
+Data structure
 
 ```go
 // Backend wraps all methods required for mining.
@@ -968,7 +951,7 @@ type Miner struct {
 }
 ```
 
-构造, 创建了一个 CPU agent 启动了 miner 的 update goroutine
+Constructed, created a CPU agent started miner update goroutine
 
 ```go
 func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine) *Miner {
@@ -986,7 +969,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 }
 ```
 
-update 订阅了 downloader 的事件， 注意这个 goroutine 是一个一次性的循环， 只要接收到一次 downloader 的 downloader.DoneEvent 或者 downloader.FailedEvent 事件， 就会设置 canStart 为 1. 并退出循环， 这是为了避免黑客恶意的 DOS 攻击，让你不断的处于异常状态
+Update subscribes to the downloader event. Note that this goroutine is a one-time loop. Once you receive a downloader's downloader.DoneEvent or downloader.FailedEvent event, it will set canStart to 1. and exit the loop. This is to avoid hackers. DOS attack, keep you in an abnormal state
 
 ```go
 // update keeps track of the downloader events. Please be aware that this is a one shot type of update loop.
@@ -1026,18 +1009,18 @@ Start
 
 ```go
 func (self *Miner) Start(coinbase common.Address) {
-	atomic.StoreInt32(&self.shouldStart, 1)  // shouldStart 是是否应该启动
+	atomic.StoreInt32(&self.shouldStart, 1)  // shouldStart should be started
 	self.worker.setEtherbase(coinbase)
 	self.coinbase = coinbase
 
-	if atomic.LoadInt32(&self.canStart) == 0 {  // canStart是否能够启动，
+	if atomic.LoadInt32(&self.canStart) == 0 {  // canStart can be started,
 		log.Info("Network syncing, will start miner afterwards")
 		return
 	}
 	atomic.StoreInt32(&self.mining, 1)
 
 	log.Info("Starting mining operation")
-	self.worker.start()  // 启动worker 开始挖矿
-	self.worker.commitNewWork()  //提交新的挖矿任务。
+	self.worker.start()  // Start the worker to start mining
+	self.worker.commitNewWork()  // submit a new work
 }
 ```
