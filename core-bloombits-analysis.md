@@ -4,7 +4,7 @@ The scheduler is a schedule for a single bit value retrieval based on a section'
 
 ### data structure
 
-Request represents a bloom retrieval task to preferentially retrieve from the local database or from the network. Section indicates the block segment number, 4096 blocks per segment, and bit indicates which bit of the Bloom filter is retrieved (a total of 2048 bits). This was introduced in the previous [yellow book [eth-bloombits-and-filter-analysis](eth-bloombits-and-filter-analysis.md)
+Request represents a bloom retrieval task to preferentially retrieve from the local database or from the network. Section indicates the block segment number, 4096 blocks per segment, and bit indicates which bit of the Bloom filter is retrieved (a total of 2048 bits). This was introduced in the previous [yellow book](./references/yellowpaper/paper.pdf) [eth-bloombits-and-filter-analysis](eth-bloombits-and-filter-analysis.md)
 
 ```go
 // request represents a bloom retrieval task to prioritize and pull from the local
