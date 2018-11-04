@@ -1077,19 +1077,19 @@ graph LR
     id1((external caller))
 		id2((goroutine dispatch))
 		id3((goruntine read))
-		subgraph ""
-			ro(requestOp)
-			sd(sendDone)
-			resp(resp)
-			close(close)
-			dq(didQuit)
-			rc(reconnect)
-		end
 
-		subgraph ""
-			rr(readResp)
-			re(readErr)
-		end
+		ro(requestOp)
+		sd(sendDone)
+		resp(resp)
+		close(close)
+		dq(didQuit)
+		rc(reconnect)
+
+
+
+		rr(readResp)
+		re(readErr)
+
 
 		id1 --> ro
 		ro --> id2
