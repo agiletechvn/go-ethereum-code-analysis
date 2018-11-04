@@ -1,4 +1,4 @@
-## RPC 包的官方文档
+## RPC package documentation
 
 Package rpc provides access to the exported methods of an object across a network
 or other I/O connection. After creating a server instance objects can be registered,
@@ -87,20 +87,32 @@ Subscriptions are deleted when:
   by the client and server. The server will close the connection on an write error or when
   the queue of buffered notifications gets too big.
 
-## RPC 包的大致结构
+## RPC structure
 
-网络协议 channels 和 Json 格式的请求和回应的编码和解码都是同时与服务端和客户端打交道的类。网络协议 channels 主要提供连接和数据传输的功能。 json 格式的编码和解码主要提供请求和回应的序列化和反序列化功能(Json -> Go 的对象)。
+The encoding and decoding of requests and responses for network protocol channels and Json formats are classes that deal with both the server and the client. Network protocol channels mainly provide connectivity and data transfer capabilities. The encoding and decoding of the json format mainly provides serialization and deserialization of requests and responses (objects of Json -> Go).
 
-![image](picture/rpc_1.png)
+- Interfaces - types.go - utils.go
 
-## 源码解析
+- Network protocols
+  - http.go
+  - websocket.go
+  - ipc.go
+- Logic
+
+  - client.go
+  - server.go
+  - subscription.go
+
+- Format
+  - json.go
+
+## Source code analysis
 
 ### server.go
 
-server.go 主要实现了 RPC 服务端的核心逻辑。 包括 RPC 方法的注册， 读取请求，处理请求，发送回应等逻辑。
-server 的核心数据结构是 Server 结构体。 services 字段是一个 map，记录了所有注册的方法和类。 run 参数是用来控制 Server 的运行和停止的。 codecs 是一个 set。 用来存储所有的编码解码器，其实就是所有的连接。 codecsMu 是用来保护多线程访问 codecs 的锁。
+Server.go mainly implements the core logic of the RPC server. Includes logic for registering RPC methods, reading requests, processing requests, and sending responses. The core data structure of the server is the Server structure. The services field is a map that records all registered methods and classes. The run parameter is used to control the running and stopping of the server. Codecs is a set. Used to store all codecs, in fact, all connections. codecsMu is a lock used to protect multithreaded access to codecs.
 
-services 字段的 value 类型是 service 类型。 service 代表了一个注册到 Server 的实例，是一个对象和方法的组合。 service 字段的 name 代表了 service 的 namespace， typ 实例的类型， callbacks 是实例的回调方法， subscriptions 是实例的订阅方法。
+The value type of the services field is the service type. Service represents an instance registered to Server and is a combination of objects and methods. The name of the service field represents the namespace of the service, the type of the typ instance, callbacks is the callback method of the instance, and subscriptions is the subscription method of the instance.
 
 ```go
 type serviceRegistry map[string]*service // collection of services
@@ -133,7 +145,7 @@ type service struct {
 }
 ```
 
-Server 的创建，Server 创建的时候通过调用 server.RegisterName 把自己的实例注册上来，提供一些 RPC 服务的元信息。
+Server creation, when the server is created, register its own instance by calling server.RegisterName, and provide some meta information of the RPC service.
 
 ```go
 const MetadataApi = "rpc"
@@ -154,7 +166,7 @@ func NewServer() *Server {
 }
 ```
 
-服务注册 server.RegisterName，RegisterName 方法会通过传入的参数来创建一个 service 对象，如过传入的 rcvr 实例没有找到任何合适的方法，那么会返回错误。 如果没有错误，就把创建的 service 实例加入 serviceRegistry。
+The service registers server.RegisterName, and the RegisterName method creates a service object with the passed parameters. If the passed rcvr instance does not find any suitable methods, an error is returned. If there are no errors, add the created service instance to the serviceRegistry.
 
 ```go
 // RegisterName will create a service for the given rcvr type under the given name. When no methods on the given rcvr
@@ -172,13 +184,13 @@ func (s *Server) RegisterName(name string, rcvr interface{}) error {
 	if name == "" {
 		return fmt.Errorf("no service name for type %s", svc.typ.String())
 	}
-	//如果实例的类名不是导出的(类名的首字母大写)，就返回错误。
+	// If the instance's class name is not exported (the first letter of the class name is capitalized), an error is returned.
 	if !isExported(reflect.Indirect(rcvrVal).Type().Name()) {
 		return fmt.Errorf("%s is not exported", reflect.Indirect(rcvrVal).Type().Name())
 	}
-	//通过反射信息找到合适的callbacks 和subscriptions方法
+	// Find the appropriate callbacks and subscriptions methods by reflecting the information
 	methods, subscriptions := suitableCallbacks(rcvrVal, svc.typ)
-	//如果这个名字当前已经被注册过了，那么如果有同名的方法就用新的替代，否者直接插入。
+	// If the name is currently registered, then if there is a method with the same name, use the new one, or insert it directly.
 	// already a previous service register under given sname, merge methods/subscriptions
 	if regsvc, present := s.services[name]; present {
 		if len(methods) == 0 && len(subscriptions) == 0 {
@@ -205,7 +217,7 @@ func (s *Server) RegisterName(name string, rcvr interface{}) error {
 }
 ```
 
-通过反射信息找出合适的方法，suitableCallbacks，这个方法在 utils.go 里面。 这个方法会遍历这个类型的所有方法，找到适配 RPC callback 或者 subscription callback 类型标准的方法并返回。关于 RPC 的标准，请参考文档开头的 RPC 标准。
+Find the appropriate method by reflecting the information, suitableCallbacks, which is in utils.go. This method traverses all methods of this type, finds methods that match the RPC callback or subscription callback type criteria and returns. For the standard of RPC, please refer to the RPC standard at the beginning of the document.
 
 ```go
 // suitableCallbacks iterates over the methods of the given type. It will determine if a method satisfies the criteria
@@ -296,7 +308,7 @@ METHODS:
 }
 ```
 
-server 启动和服务， server 的启动和服务这里参考 ipc.go 中的一部分代码。可以看到每 Accept()一个链接，就启动一个 goroutine 调用 srv.ServeCodec 来进行服务，这里也可以看出 JsonCodec 的功能，Codec 类似于装饰器模式，在连接外面包了一层。Codec 会放在后续来介绍，这里先简单了解一下。
+Server startup and services, server startup and services here refer to some of the code in ipc.go. You can see a link for each Accept(), and start a goroutine call srv.ServeCodec for service. Here you can also see the function of JsonCodec. Codec is similar to the decorator mode, and it has a layer of bread on the connection. Codec will be introduced later, here is a brief look.
 
 ```go
 func (srv *Server) ServeListener(l net.Listener) error {
@@ -311,7 +323,7 @@ func (srv *Server) ServeListener(l net.Listener) error {
 }
 ```
 
-ServeCodec, 这个方法很简单，提供了 codec.Close 的关闭功能。 serveRequest 的第二个参数 singleShot 是控制长连接还是短连接的参数，如果 singleShot 为真，那么处理完一个请求之后会退出。 不过咱们的 serveRequest 方法是一个死循环，不遇到异常，或者客户端主动关闭，服务端是不会关闭的。 所以 rpc 提供的是长连接的功能。
+ServeCodec, this method is very simple, provides the shutdown function of codec.Close. The second parameter of serveRequest, singleShot, is a parameter that controls long or short connections. If singleShot is true, it will exit after processing a request. However, our serveRequest method is an infinite loop, no exception is encountered, or the client is actively closed, the server will not close. So rpc provides the function of long connections.
 
 ```go
 // ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
@@ -323,9 +335,9 @@ func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
 }
 ```
 
-我们的重磅方法终于出场，serveRequest 这个方法就是 Server 的主要处理流程。从 codec 读取请求，找到对应的方法并调用，然后把回应写入 codec。
+Our heavy method finally came out, and the serveRequest method is the main processing flow of the server. Read the request from codec, find the corresponding method and call it, then write the response to codec.
 
-部分标准库的代码可以参考网上的使用教程， sync.WaitGroup 实现了一个信号量的功能。 Context 实现上下文管理。
+Some standard library code can refer to the online tutorial, sync.WaitGroup implements a semaphore function. Context implements context management.
 
 ```go
 // serveRequest will reads requests from the codec, calls the RPC callback and
@@ -375,9 +387,9 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 				codec.Write(codec.CreateErrorResponse(nil, err))
 			}
 			// Error or end of stream, wait for requests and tear down
-			//这里主要是考虑多线程处理的时候等待所有的request处理完毕，
-			//每启动一个go线程会调用pend.Add(1)。
-			//处理完成后调用pend.Done()会减去1。当为0的时候，Wait()方法就会返回。
+			// Here is mainly to consider the multi-thread processing when waiting for all the request processing is completed,
+			//everever a go thread is started will call pend.Add(1).
+			// Calling pend.Done() after processing is complete will subtract 1. When it is 0, the Wait() method will return.
 			pend.Wait()
 			return nil
 		}
@@ -398,7 +410,6 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			return nil
 		}
 		// If a single shot request is executing, run and return immediately
-		//如果只执行一次，那么执行完成后返回。
 		if singleShot {
 			if batch {
 				s.execBatch(ctx, codec, reqs)
@@ -409,7 +420,6 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 		}
 		// For multi-shot connections, start a goroutine to serve and loop back
 		pend.Add(1)
-		//启动线程对请求进行服务。
 		go func(reqs []*serverRequest, batch bool) {
 			defer pend.Done()
 			if batch {
@@ -423,8 +433,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 }
 ```
 
-readRequest 方法，从 codec 读取请求，然后根据请求查找对应的方法组装成 requests 对象。
-rpcRequest 是 codec 返回的请求类型。j
+The readRequest method reads the request from codec and then assembles the corresponding method into the requests object based on the request. rpcRequest is the type of request returned by codec. j
 
 ```go
 type rpcRequest struct {
@@ -437,7 +446,7 @@ type rpcRequest struct {
 }
 ```
 
-serverRequest 进行处理之后返回的 request
+Request returned after serverRequest is processed
 
 ```go
 // serverRequest is an incoming request
@@ -451,7 +460,7 @@ type serverRequest struct {
 }
 ```
 
-readRequest 方法，从 codec 读取请求，对请求进行处理生成 serverRequest 对象返回。
+The readRequest method reads the request from codec and processes the request to generate a serverRequest object.
 
 ```go
 // readRequest requests the next (batch) request from the codec. It will return the collection
@@ -463,7 +472,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 		return nil, batch, err
 	}
 	requests := make([]*serverRequest, len(reqs))
-	// 根据reqs构建requests
+	// Build requests based on reqs
 	// verify requests
 	for i, r := range reqs {
 		var ok bool
@@ -473,7 +482,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			requests[i] = &serverRequest{id: r.id, err: r.err}
 			continue
 		}
-		//如果请求是发送/订阅方面的请求，而且方法名称有_unsubscribe后缀。
+		// If the request is a send/subscribe request, and the method name has the _unsubscribe suffix.
 		if r.isPubSub && strings.HasSuffix(r.method, unsubscribeMethodSuffix) {
 			requests[i] = &serverRequest{id: r.id, isUnsubscribe: true}
 			argTypes := []reflect.Type{reflect.TypeOf("")} // expect subscription id as first arg
@@ -484,12 +493,12 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			}
 			continue
 		}
-		//如果没有注册这个服务。
+		// If you have not registered this service.
 		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available
 			requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
 			continue
 		}
-		//如果是发布和订阅模式。 调用订阅方法。
+		// If it is a publish and subscribe mode. Call the subscription method.
 		if r.isPubSub { // eth_subscribe, r.method contains the subscription method name
 			if callb, ok := svc.subscriptions[r.method]; ok {
 				requests[i] = &serverRequest{id: r.id, svcname: svc.name, callb: callb}
@@ -527,7 +536,7 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 }
 ```
 
-exec 和 execBatch 方法,调用 s.handle 方法对 request 进行处理。
+exec and execBatch method, call s.handle method of request processing.
 
 ```go
 // exec executes the given request and writes the result back using the codec.
@@ -579,7 +588,7 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 }
 ```
 
-handle 方法，执行一个 request，然后返回 response
+Handle method, execute a request, then return response
 
 ```go
 // handle executes a request and returns the response from the callback.
@@ -587,7 +596,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	if req.err != nil {
 		return codec.CreateErrorResponse(&req.id, req.err), nil
 	}
-	//如果是取消订阅的消息。NotifierFromContext(ctx)获取之前我们存入ctx的notifier。
+	// If it is a publish and subscribe mode. Call the subscription method....
 	if req.isUnsubscribe { // cancel subscription, first param must be the subscription id
 		if len(req.args) >= 1 && req.args[0].Kind() == reflect.String {
 			notifier, supported := NotifierFromContext(ctx)
@@ -604,7 +613,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 		}
 		return codec.CreateErrorResponse(&req.id, &invalidParamsError{"Expected subscription id as first argument"}), nil
 	}
-	//如果是订阅消息。 那么创建订阅。并激活订阅。
+	// If it is a subscription message. Then create a subscription. And activate the subscription.
 	if req.callb.isSubscribe {
 		subid, err := s.createSubscription(ctx, codec, req)
 		if err != nil {
@@ -635,7 +644,7 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 	if len(req.args) > 0 {
 		arguments = append(arguments, req.args...)
 	}
-	//调用提供的rpc方法，并获取reply
+	// Call the provided rpc method and get reply
 	// execute RPC method and return result
 	reply := req.callb.method.Func.Call(arguments)
 	if len(reply) == 0 {
@@ -653,14 +662,15 @@ func (s *Server) handle(ctx context.Context, codec ServerCodec, req *serverReque
 }
 ```
 
-### subscription.go 发布订阅模式。
+### subscription.go publish subscription mode.
 
-在之前的 server.go 中就有出现了一些发布订阅模式的代码， 在这里集中阐述一下。
+In the previous server.go, there were some code for publishing the subscription mode, which is elaborated here.
 
-我们在 serveRequest 的代码中，就有这样的代码。
+We have this code in the code of serveRequest.
 
-    如果codec支持, 可以通过一个叫notifier的对象执行回调函数发送消息给客户端。
-    他和codec/connection关系很紧密。 如果连接被关闭，那么notifier会关闭，并取消掉所有激活的订阅。
+    If codec supports it, you can send a message to the client via a callback function called notifier.
+
+He has a close relationship with codec/connection. If the connection is closed, the notifier will close and all active subscriptions will be revoked.
 
 ```go
 // if the codec supports notification include a notifier that callbacks can use
@@ -671,7 +681,7 @@ if options&OptionSubscriptions == OptionSubscriptions {
 }
 ```
 
-在服务一个客户端连接时候，调用 newNotifier 方法创建了一个 notifier 对象存储到 ctx 中。可以观察到 Notifier 对象保存了 codec 的实例，也就是说 Notifier 对象保存了网络连接，用来在需要的时候发送数据。
+When serving a client connection, the newNotifier method is called to create a notifier object stored in ctx. You can observe that the Notifier object holds an instance of codec, which means that the Notifier object holds a network connection and is used to send data when needed.
 
 ```go
 // newNotifier creates a new notifier that can be used to send subscription
@@ -685,7 +695,7 @@ func newNotifier(codec ServerCodec) *Notifier {
 }
 ```
 
-然后在 handle 方法中， 我们处理一类特殊的方法，这种方法被标识为 isSubscribe. 调用 createSubscription 方法创建了了一个 Subscription 并调用 notifier.activate 方法存储到 notifier 的激活队列里面。 代码里面有一个技巧。 这个方法调用完成后并没有直接激活 subscription，而是把激活部分的代码作为一个函数返回回去。然后在 exec 或者 execBatch 代码里面等待 codec.CreateResponse(req.id, subid)这个 response 被发送给客户端之后被调用。避免客户端还没有收到 subscription ID 的时候就收到了 subscription 信息。
+Then handle approach, we are dealing with a special kind of method, which is identified as isSubscribe. CreateSubscription call method creates a Subscription and call notifier.activate way to store the notifier activation queue inside. There is a trick in the code. After the method call is completed, the subscription is not directly activated, but the code of the active part is returned as a function. Then wait for the code inside exec or execBatch codec.CreateResponse (req.id, subid) This response is sent to the client after being called. Prevent the client from receiving the subscription information when it has not received the subscription ID.
 
 ```go
 if req.callb.isSubscribe {
@@ -704,7 +714,7 @@ if req.callb.isSubscribe {
 }
 ```
 
-createSubscription 方法会调用指定的注册上来的方法，并得到回应。
+The createSubscription method will call the specified registered method and get a response.
 
 ```go
 // createSubscription will call the subscription callback and returns the subscription id or error.
@@ -722,7 +732,7 @@ func (s *Server) createSubscription(ctx context.Context, c ServerCodec, req *ser
 }
 ```
 
-在来看看我们的 activate 方法，这个方法激活了 subscription。 subscription 在 subscription ID 被发送给客户端之后被激活，避免客户端还没有收到 subscription ID 的时候就收到了 subscription 信息。
+Take a look at our activate method, which activates the subscription. The subscription is activated after the subscription ID is sent to the client, preventing the client from receiving the subscription information when it has not received the subscription ID.
 
 ```go
 // activate enables a subscription. Until a subscription is enabled all
@@ -740,7 +750,7 @@ func (n *Notifier) activate(id ID, namespace string) {
 }
 ```
 
-我们再来看一个取消订阅的函数
+Let's look at a function to unsubscribe.
 
 ```go
 // unsubscribe a subscription.
@@ -757,7 +767,7 @@ func (n *Notifier) unsubscribe(id ID) error {
 }
 ```
 
-最后是一个发送订阅的函数，调用这个函数把数据发送到客户端， 这个也比较简单。
+Finally, a function that sends a subscription, calling this function to send data to the client, is also relatively simple.
 
 ```go
 // Notify sends a notification to the client with the given data as payload.
@@ -778,33 +788,30 @@ func (n *Notifier) Notify(id ID, data interface{}) error {
 }
 ```
 
-如何使用建议通过 subscription_test.go 的 TestNotifications 来查看完整的流程。
+How to use the suggestions to see the complete process through TestNotifications of subscription_test.go.
 
-### client.go RPC 客户端源码分析。
+### client.go RPC analysis
 
-客户端的主要功能是把请求发送到服务端，然后接收回应，再把回应传递给调用者。
+The main function of the client is to send the request to the server, then receive the response, and then pass the response to the caller.
 
-客户端的数据结构
+Client data structure
 
 ```go
 // Client represents a connection to an RPC server.
 type Client struct {
 	idCounter   uint32
-	//生成连接的函数，客户端会调用这个函数生成一个网络连接对象。
+	// The function that generates the connection, the client will call this function to generate a network connection object.
 	connectFunc func(ctx context.Context) (net.Conn, error)
-	//HTTP协议和非HTTP协议有不同的处理流程， HTTP协议不支持长连接， 只支持一个请求对应一个回应的这种模式，同时也不支持发布/订阅模式。
+	// The HTTP protocol and the non-HTTP protocol have different processing procedures. The HTTP protocol does not support long connections. It only supports one mode for requesting one response, and does not support the publish/subscribe mode.
 	isHTTP      bool
 
 	// writeConn is only safe to access outside dispatch, with the
 	// write lock held. The write lock is taken by sending on
 	// requestOp and released by sending on sendDone.
-	//通过这里的注释可以看到，writeConn是调用这用来写入请求的网络连接对象，
-	//只有在dispatch方法外面调用才是安全的，而且需要通过给requestOp队列发送请求来获取锁，
-	//获取锁之后就可以把请求写入网络，写入完成后发送请求给sendDone队列来释放锁，供其它的请求使用。
 	writeConn net.Conn
 
 	// for dispatch
-	//下面有很多的channel，channel一般来说是goroutine之间用来通信的通道，后续会随着代码介绍channel是如何使用的。
+	// There are a lot of channels below. The channel is generally the channel used for communication between goroutines. The code will introduce how the channel is used.
 	close       chan struct{}
 	didQuit     chan struct{}                  // closed when client quits
 	reconnected chan net.Conn                  // where write/reconnect sends the new connection
@@ -817,7 +824,7 @@ type Client struct {
 }
 ```
 
-newClient， 新建一个客户端。 通过调用 connectFunc 方法来获取一个网络连接，如果网络连接是 httpConn 对象的化，那么 isHTTP 设置为 true。然后是对象的初始化， 如果是 HTTP 连接的化，直接返回，否者就启动一个 goroutine 调用 dispatch 方法。 dispatch 方法是整个 client 的指挥中心，通过上面提到的 channel 来和其他的 goroutine 来进行通信，获取信息，根据信息做出各种决策。后续会详细介绍 dispatch。 因为 HTTP 的调用方式非常简单， 这里先对 HTTP 的方式做一个简单的阐述。
+newClient, create a new client. Get a network connection by calling the connectFunc method, if the network connection is an httpConn object, then isHTTP is set to true. Then the initialization of the object, if it is an HTTP connection, return directly, otherwise start a goroutine call dispatch method. The dispatch method is the command center of the entire client. It communicates with other gorouts through the above mentioned channels to obtain information and make various decisions based on the information. The follow-up will detail the dispatch. Because the way HTTP is called is very simple, here is a brief explanation of the way HTTP is used.
 
 ```go
 func newClient(initctx context.Context, connectFunc func(context.Context) (net.Conn, error)) (*Client, error) {
@@ -848,7 +855,7 @@ func newClient(initctx context.Context, connectFunc func(context.Context) (net.C
 }
 ```
 
-请求调用通过调用 client 的 Call 方法来进行 RPC 调用。
+The request is invoked by calling the client's Call method to make an RPC call.
 
 ```go
 // Call performs a JSON-RPC call with the given arguments and unmarshals into
@@ -856,7 +863,6 @@ func newClient(initctx context.Context, connectFunc func(context.Context) (net.C
 //
 // The result must be a pointer so that package json can unmarshal into it. You
 // can also pass nil, in which case the result is ignored.
-// 返回值必须是一个指针，这样才能把json值转换成对象。 如果你不关心返回值，也可以通过传nil来忽略。
 func (c *Client) Call(result interface{}, method string, args ...interface{}) error {
 	ctx := context.Background()
 	return c.CallContext(ctx, result, method, args...)
@@ -867,7 +873,7 @@ func (c *Client) CallContext(ctx context.Context, result interface{}, method str
 	if err != nil {
 		return err
 	}
-	//构建了一个requestOp对象。 resp是读取返回的队列，队列的长度是1。
+	// Build a requestOp object. Resp is the queue returned by the read, the length of the queue is 1.
 	op := &requestOp{ids: []json.RawMessage{msg.ID}, resp: make(chan *jsonrpcMessage, 1)}
 
 	if c.isHTTP {
@@ -893,7 +899,7 @@ func (c *Client) CallContext(ctx context.Context, result interface{}, method str
 }
 ```
 
-sendHTTP,这个方法直接调用 doRequest 方法进行请求拿到回应。然后写入到 resp 队列就返回了。
+sendHTTP, this method directly calls the doRequest method to request a response. Then it is written to the resp queue and returned.
 
 ```go
 func (c *Client) sendHTTP(ctx context.Context, op *requestOp, msg interface{}) error {
@@ -912,7 +918,7 @@ func (c *Client) sendHTTP(ctx context.Context, op *requestOp, msg interface{}) e
 }
 ```
 
-在看看上面的另一个方法 op.wait()方法，这个方法会查看两个队列的信息。如果是 http 那么从 resp 队列获取到回应就会直接返回。 这样整个 HTTP 的请求过程就完成了。 中间没有涉及到多线程问题，都在一个线程内部完成了。
+Looking at the other method op.wait() method above, this method will look at the information of the two queues. If it is http then the response is retrieved directly from the resp queue. This completes the entire HTTP request process. There are no multithreading issues involved in the middle, all done inside a thread.
 
 ```go
 func (op *requestOp) wait(ctx context.Context) (*jsonrpcMessage, error) {
@@ -925,9 +931,9 @@ func (op *requestOp) wait(ctx context.Context) (*jsonrpcMessage, error) {
 }
 ```
 
-如果不是 HTTP 请求呢。 那处理的流程就比较复杂了， 还记得如果不是 HTTP 请求。在 newClient 的时候是启动了一个 goroutine 调用了 dispatch 方法。 我们先看非 http 的 send 方法。
+If it is not an HTTP request. The process of processing is more complicated, remember if it is not an HTTP request. In the newClient, a goroutine is started and the dispatch method is called. Let's first look at the non-http send method.
 
-从注释来看。 这个方法把 op 写入到 requestOp 这个队列，注意的是这个队列是没有缓冲区的，也就是说如果这个时候这个队列没有人处理的化，这个调用是会阻塞在这里的。 这就相当于一把锁，如果发送 op 到 requestOp 成功了就拿到了锁，可以继续下一步，下一步是调用 write 方法把请求的全部内容发送到网络上。然后发送消息给 sendDone 队列。sendDone 可以看成是锁的释放，后续在 dispatch 方法里面会详细分析这个过程。 然后返回。返回之后方法会阻塞在 op.wait 方法里面。直到从 op.resp 队列收到一个回应，或者是收到一个 ctx.Done()消息(这个消息一般会在完成或者是强制退出的时候获取到。)
+Look at the comments. This method writes op to the requestOp queue. Note that this queue has no buffers. That is to say, if there is no user processing in this queue at this time, this call will block here. This is equivalent to a lock. If you send the op to requestOp and you get the lock, you can continue to the next step. The next step is to call the write method to send the entire contents of the request to the network. Then send a message to the sendDone queue. sendDone can be seen as the release of the lock, which will be analyzed in detail later in the dispatch method. Then return. After returning, the method will block in the op.wait method. Until a response is received from the op.resp queue, or a ctx.Done() message is received (this message is typically obtained when the completion or forced exit).
 
 ```go
 // send registers op with the dispatch loop, then sends msg on the connection.
@@ -946,13 +952,13 @@ func (c *Client) send(ctx context.Context, op *requestOp, msg interface{}) error
 		// subscription notifications.
 		return ctx.Err()
 	case <-c.didQuit:
-		//已经退出，可能被调用了Close
+		// Already quit, may be called Close
 		return ErrClientQuit
 	}
 }
 ```
 
-dispatch 方法
+dispatch method
 
 ```go
 // dispatch is the main loop of the client.
@@ -990,7 +996,7 @@ func (c *Client) dispatch(conn net.Conn) {
 
 		// Read path.
 		case batch := <-c.readResp:
-			//读取到一个回应。调用相应的方法处理
+			// Read a response. Call the corresponding method to handle
 			for _, msg := range batch {
 				switch {
 				case msg.isNotification():
@@ -1012,22 +1018,22 @@ func (c *Client) dispatch(conn net.Conn) {
 			}
 
 		case err := <-c.readErr:
-			//接收到读取失败信息，这个是read线程传递过来的。
+			// Received a read failure message, this is passed by the read thread.
 			log.Debug(fmt.Sprintf("<-readErr: %v", err))
 			c.closeRequestOps(err)
 			conn.Close()
 			reading = false
 
 		case newconn := <-c.reconnected:
-			//接收到一个重连接信息
+			// Received a reconnection message
 			log.Debug(fmt.Sprintf("<-reconnected: (reading=%t) %v", reading, conn.RemoteAddr()))
 			if reading {
-				//等待之前的连接读取完成。
+				// Wait for the previous connection to be read.
 				// Wait for the previous read loop to exit. This is a rare case.
 				conn.Close()
 				<-c.readErr
 			}
-			//开启阅读的goroutine
+			// Open reading goroutine
 			go c.read(newconn)
 			reading = true
 			conn = newconn
@@ -1035,28 +1041,28 @@ func (c *Client) dispatch(conn net.Conn) {
 		// Send path.
 		case op := <-requestOpLock:
 			// Stop listening for further send ops until the current one is done.
-			//接收到一个requestOp消息，那么设置requestOpLock为空，
-			//这个时候如果有其他人也希望发送op到requestOp，会因为没有人处理而阻塞。
+			// Receive a requestOp message, then set requestOpLock is empty,
+			// This time if someone else also wants to send op to requestOp, it will block because no one is dealing.
 			requestOpLock = nil
 			lastOp = op
-			//把这个op加入等待队列。
+			// Add this op to the wait queue.
 			for _, id := range op.ids {
 				c.respWait[string(id)] = op
 			}
 
 		case err := <-c.sendDone:
-			//当op的请求信息已经发送到网络上。会发送信息到sendDone。如果发送过程出错，那么err !=nil。
+			// When the request information of the op has been sent to the network. Will send a message to sendDone. If the sending process fails, then err !=nil.
 			if err != nil {
 				// Remove response handlers for the last send. We remove those here
 				// because the error is already handled in Call or BatchCall. When the
 				// read loop goes down, it will signal all other current operations.
-				//把所有的id从等待队列删除。
+				// Remove all ids from the waiting queue.
 				for _, id := range lastOp.ids {
 					delete(c.respWait, string(id))
 				}
 			}
 			// Listen for send ops again.
-			//重新开始处理requestOp的消息。
+			// Restart the message processing requestOp.
 			requestOpLock = c.requestOp
 			lastOp = nil
 		}
@@ -1064,20 +1070,56 @@ func (c *Client) dispatch(conn net.Conn) {
 }
 ```
 
-下面通过下面这种图来说明 dispatch 的主要流程。下面图片中圆形是线程。 蓝色矩形是 channel。 箭头代表了 channel 的数据流动方向。
+The following is a diagram to illustrate the main flow of the dispatch. The circle in the image below is a thread. The blue rectangle is the channel. The arrows represent the direction of data flow for the channel.
 
-![image](picture/rpc_2.png)
+```mermaid
+graph LR
+    id1((external caller))
+		id2((goroutine dispatch))
+		id3((goruntine read))
+		subgraph ""
+			ro(requestOp)
+			sd(sendDone)
+			resp(resp)
+			close(close)
+			dq(didQuit)
+			rc(reconnect)
+		end
 
-- 多线程串行发送请求到网络上的流程 首先发送 requestOp 请求到 dispatch 获取到锁， 然后把请求信息写入到网络，然后发送 sendDone 信息到 dispatch 解除锁。 通过 requestOp 和 sendDone 这两个 channel 以及 dispatch 代码的配合完成了串行的发送请求到网络上的功能。
-- 读取返回信息然后返回给调用者的流程。 把请求信息发送到网络上之后， 内部的 goroutine read 会持续不断的从网络上读取信息。 read 读取到返回信息之后，通过 readResp 队列发送给 dispatch。 dispatch 查找到对应的调用者，然后把返回信息写入调用者的 resp 队列中。完成返回信息的流程。
-- 重连接流程。 重连接在外部调用者写入失败的情况下被外部调用者主动调用。 调用完成后发送新的连接给 dispatch。 dispatch 收到新的连接之后，会终止之前的连接，然后启动新的 read goroutine 来从新的连接上读取信息。
-- 关闭流程。 调用者调用 Close 方法，Close 方法会写入信息到 close 队列。 dispatch 接收到 close 信息之后。 关闭 didQuit 队列，关闭连接，等待 read goroutine 停止。 所有等待在 didQuit 队列上面的客户端调用全部返回。
+		subgraph ""
+			rr(readResp)
+			re(readErr)
+		end
 
-#### 客户端 订阅模式的特殊处理
+		id1 --> ro
+		ro --> id2
+		id1 --> sd
+		sd --> id2
+		id2 --> resp
+		resp --> id1
+		id1 --> close
+		close --> id2
+		id2 --> dq
+		dq --> id1
+		id1 --> rc
+		rc --> id2
 
-上面提到的主要流程是方法调用的流程。 以太坊的 RPC 框架还支持发布和订阅的模式。
+		id3 --> rr
+		rr --> id2
+		id3 --> re
+		re --> id2
+```
 
-我们先看看订阅的方法，以太坊提供了几种主要 service 的订阅方式(EthSubscribe ShhSubscribe).同时也提供了自定义服务的订阅方法(Subscribe)，
+- The multithreaded serial send request to the network process first sends a requestOp request to the dispatch to get the lock, then writes the request information to the network, and then sends the sendDone message to the dispatch to unlock. Through the cooperation of the requestOp and sendDone channels and the dispatch code, the serial send request is sent to the network.
+- Read the return message and return it to the caller's process. After the request information is sent to the network, the internal goroutine read continuously reads information from the network. Read reads the returned information and sends it to the dispatch via the readResp queue. Dispatch finds the corresponding caller and writes the return information to the caller's resp queue. Complete the process of returning information.
+- Reconnect the process. The reconnection is actively invoked by the external caller if the external caller fails to write. Send a new connection to the dispatch after the call is complete. After the dispatch receives the new connection, it terminates the previous connection and then starts a new read goroutine to read the information from the new connection.
+- Close the process. The caller calls the Close method, which writes information to the close queue. Dispatch after receiving the close message. Close the didQuit queue, close the connection, and wait for the read goroutine to stop. All client calls waiting to be placed on the didQuit queue are returned.
+
+#### Special handling of client subscription mode
+
+The main process mentioned above is the process of method invocation. Ethereum's RPC framework also supports publishing and subscription models.
+
+Let's take a look at the subscription method. Ethereum provides several major service subscription methods (EthSubscribe ShhSubscribe). It also provides a subscription method for custom services (Subscribe).
 
 ```go
 // EthSubscribe registers a subscripion under the "eth" namespace.
@@ -1102,10 +1144,6 @@ func (c *Client) ShhSubscribe(ctx context.Context, channel interface{}, args ...
 // before considering the subscriber dead. The subscription Err channel will receive
 // ErrSubscriptionQueueOverflow. Use a sufficiently large buffer on the channel or ensure
 // that the channel usually has at least one reader to prevent this issue.
-//Subscribe会使用传入的参数调用"<namespace>_subscribe"方法来订阅指定的消息。
-//服务器的通知会写入channel参数指定的队列。 channel参数必须和返回的类型相同。
-//ctx参数可以用来取消RPC的请求，但是如果订阅已经完成就不会有效果了。
-//处理速度太慢的订阅者的消息会被删除，每个客户端有8000个消息的缓存。
 func (c *Client) Subscribe(ctx context.Context, namespace string, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
 	// Check type of channel first.
 	chanVal := reflect.ValueOf(channel)
@@ -1123,7 +1161,7 @@ func (c *Client) Subscribe(ctx context.Context, namespace string, channel interf
 	if err != nil {
 		return nil, err
 	}
-	//requestOp的参数和Call调用的不一样。 多了一个参数sub.
+	// The parameters of requestOp are different from those of Call. One more parameter sub.
 	op := &requestOp{
 		ids:  []json.RawMessage{msg.ID},
 		resp: make(chan *jsonrpcMessage),
@@ -1142,7 +1180,7 @@ func (c *Client) Subscribe(ctx context.Context, namespace string, channel interf
 }
 ```
 
-newClientSubscription 方法，这个方法创建了一个新的对象 ClientSubscription，这个对象把传入的 channel 参数保存起来。 然后自己又创建了三个 chan 对象。后续会对详细介绍这三个 chan 对象
+The newClientSubscription method, which creates a new object, ClientSubscription, which holds the passed channel parameters. Then I created three chan objects myself. The follow-up will detail these three chan objects.
 
 ```go
 func newClientSubscription(c *Client, namespace string, channel reflect.Value) *ClientSubscription {
@@ -1159,7 +1197,7 @@ func newClientSubscription(c *Client, namespace string, channel reflect.Value) *
 }
 ```
 
-从上面的代码可以看出。订阅过程根 Call 过程差不多，构建一个订阅请求。调用 send 发送到网络上，然后等待返回。 我们通过 dispatch 对返回结果的处理来看看订阅和 Call 的不同。
+As can be seen from the code above. The subscription process root Call process is similar, building a subscription request. Call send to the network and wait for it to return. We use the dispatch to process the returned results to see the difference between the subscription and the Call.
 
 ```go
 func (c *Client) handleResponse(msg *jsonrpcMessage) {
@@ -1170,7 +1208,7 @@ func (c *Client) handleResponse(msg *jsonrpcMessage) {
 	}
 	delete(c.respWait, string(msg.ID))
 	// For normal responses, just forward the reply to Call/BatchCall.
-	如果op.sub是nil，普通的RPC请求，这个字段的值是空白的，只有订阅请求才有值。
+	// If op.sub is nil, the normal RPC request, the value of this field is blank, only the subscription request has a value.
 	if op.sub == nil {
 		op.resp <- msg
 		return
@@ -1184,14 +1222,14 @@ func (c *Client) handleResponse(msg *jsonrpcMessage) {
 		return
 	}
 	if op.err = json.Unmarshal(msg.Result, &op.sub.subid); op.err == nil {
-		//启动一个新的goroutine 并把op.sub.subid记录起来。
+		// Start a new goroutine and record the op.sub.subid.
 		go op.sub.start()
 		c.subs[op.sub.subid] = op.sub
 	}
 }
 ```
 
-op.sub.start 方法。 这个 goroutine 专门用来处理订阅消息。主要的功能是从 in 队列里面获取订阅消息，然后把订阅消息放到 buffer 里面。 如果能够数据能够发送。就从 buffer 里面发送一些数据给用户传入的那个 channel。 如果 buffer 超过指定的大小，就丢弃。
+op.sub.start method. This goroutine is designed to handle subscription messages. The main function is to get the subscription message from the in queue and then put the subscription message in the buffer. If the data can be sent. Just send some data from the buffer to the channel that the user passed in. If the buffer exceeds the specified size, it is discarded.
 
 ```go
 func (sub *ClientSubscription) start() {
@@ -1238,7 +1276,7 @@ func (sub *ClientSubscription) forward() (err error, unsubscribeServer bool) {
 }
 ```
 
-当接收到一条 Notification 消息的时候会调用 handleNotification 方法。会把消息传送给 in 队列。
+The handleNotification method is called when a Notification message is received. The message will be delivered to the in queue.
 
 ```go
 func (c *Client) handleNotification(msg *jsonrpcMessage) {
