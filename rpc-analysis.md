@@ -1092,22 +1092,24 @@ graph LR
 
 
 		id1 --> ro
-		ro --> id2
 		id1 --> sd
-		sd --> id2
-		id2 --> resp
-		resp --> id1
 		id1 --> close
-		close --> id2
-		id2 --> dq
-		dq --> id1
 		id1 --> rc
+		resp --> id1
+		dq --> id1
+
+		id2 --> resp
+		id2 --> dq
+		ro --> id2
+		rr --> id2
+		re --> id2
+		sd --> id2
+		close --> id2
 		rc --> id2
 
 		id3 --> rr
-		rr --> id2
 		id3 --> re
-		re --> id2
+
 ```
 
 - The multithreaded serial send request to the network process first sends a requestOp request to the dispatch to get the lock, then writes the request information to the network, and then sends the sendDone message to the dispatch to unlock. Through the cooperation of the requestOp and sendDone channels and the dispatch code, the serial send request is sent to the network.
