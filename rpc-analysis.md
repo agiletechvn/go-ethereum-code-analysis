@@ -1076,7 +1076,7 @@ The following is a diagram to illustrate the main flow of the dispatch. The circ
 graph LR
     id1((external caller))
 		id2((goroutine dispatch))
-		id3((goruntine read))
+		id3((goroutine read))
 
 		ro(requestOp)
 		sd(sendDone)
@@ -1109,7 +1109,6 @@ graph LR
 
 		id3 --> rr
 		id3 --> re
-
 ```
 
 - The multithreaded serial send request to the network process first sends a requestOp request to the dispatch to get the lock, then writes the request information to the network, and then sends the sendDone message to the dispatch to unlock. Through the cooperation of the requestOp and sendDone channels and the dispatch code, the serial send request is sent to the network.
