@@ -12,7 +12,7 @@
 **Kademlia topology**  
 Swarm use the ethereum devp2p rlpx suite as the transport layer of the underlay network. This allows semi-stable peer connections over TCP with authenticated, encrypted, synchronous data streams.  
 In a graph with kademlia topology, a path between any two points exists, it can be found using only local decisions on each hop and is guaranteed to terminate in no more steps than the depth of the destination plus one.
-![kademlia](./picture/topology.svg)
+![kademlia](./picture/topology.png)
 
 this distributed hash table stores resource locations throughout the network
 
@@ -33,7 +33,7 @@ The hashes and the node IDs must be of the same length. It then searches for sev
 **Distributed preimage archive**  
 Distributed hash tables (DHTs) utilise an overlay network to implement a key-value store distributed over the nodes. The basic idea is that the keyspace is mapped onto the overlay address space, and information about an element in the container is to be found with nodes whose address is in the proximity of the key. DHTs for decentralised content addressed storage typically associate content fingerprints with a list of nodes (seeders) who can serve that content. However, the same structure can be used directly: it is not information about the location of content that is stored at the node closest to the address (fingerprint), but the content itself. We call this structure distributed preimage archive (DPA).
 
-![swarm](./picture/dpa-chunking.svg)
+![swarm](./picture/dpa-chunking.png)
 
 **Replicas hold by a set of nearest neighbours**  
 A chunk is said to be redundantly retrievable of degree n if it is retrievable and would remain so after any n-1 responsible nodes leave the network. In the case of request forwarding failures, one can retry, or start concurrent retrieve requests.
@@ -45,7 +45,7 @@ What a node stores is determined by the access count of chunks: if we reach the 
 
 **Synchronisation**  
 In order to reduce network traffic resulting from receiving chunks from multiple sources, all store requests can go via a confirmation roundtrip. For each peer connection in both directions, the source peer sends an offeredHashes message containing a batch of hashes offered to push to the recipient. Recipient responds with a wantedHashes.
-![sync](./picture/syncing-high-level.svg)
+![sync](./picture/syncing-high-level.png)
 
 **Data layer**  
 There are 4 different layers of data units relevant to Swarm:
@@ -56,7 +56,7 @@ There are 4 different layers of data units relevant to Swarm:
 - collection: a mapping of paths to files is represented by the swarm manifest. This layer has a mapping to file system directory tree. Given trivial routing conventions, a url can be mapped to files in a standardised way, allowing manifests to mimic site maps/routing tables. As a result, Swarm is able to act as a webserver, a virtual cloud hosting service.
 
 The actual storage layer of Swarm consists of two main components, the localstore and the netstore. The local store consists of an in-memory fast cache (memory store) and a persistent disk storage (dbstore). The NetStore is extending local store to a distributed storage of Swarm and implements the distributed preimage archive (DPA).
-![storage](./picture/storage-layer.svg)
+![storage](./picture/storage-layer.png)
 
 **Pss**  
 pss (Postal Service over Swarm) is a messaging protocol utilizing whisper protocol over Swarm with strong privacy features.
