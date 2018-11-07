@@ -1,91 +1,96 @@
-RLP 是 Recursive Length Prefix 的简写。是以太坊中的序列化方法，以太坊的所有对象都会使用 RLP 方法序列化为字节数组。这里我希望先从黄皮书来形式化上了解 RLP 方法， 然后通过代码来分析实际的实现。
+RLP is short for Recursive Length Prefix. In the serialization method in Ethereum, all objects in Ethereum are serialized into byte arrays using RLP methods. Here I hope to formalize the RLP method from the Yellow Book and then analyze the actual implementation through code.
 
-## 黄皮书的形式化定义
+## Formal definition of the Yellow Book
 
-我们定义了集合 T。 T 由下面的公式进行定义
+We define the set T. T is defined by the following formula
 
 ![image](picture/rlp_1.png)
 
-上图中的 O 代表所有 byte 的集合， 那么 B 代表了所有可能的字节数组，L 代表了不只一个单一节点的树形结构(比如结构体，或者是树节点的分支节点， 非叶子节点)， T 代表了所有的字节数组和树形结构的组合。
+The O in the above figure represents a collection of all bytes, then B represents all possible byte arrays, and L represents a tree structure of more than one single node (such as a structure, or a branch node of a tree node, a non-leaf node) , T represents a combination of all byte arrays and tree structures.
 
-我们使用两个子函数来定义 RLP 函数，这两个子函数分别处理上面说到的两种结构(L 或者 B).
+We use two sub-functions to define the RLP functions, which handle the two structures (L or B) mentioned above.
 
 ![image](picture/rlp_2.png)
 
-对于所有 B 类型的字节数组。我们定义了如下的处理规则。
+For all B type byte arrays. We have defined the following processing rules.
 
-- 如果字节数组只包含一个字节，而且这个字节的大小小于 128，那么不对数据进行处理，处理结果就是原数据
-- 如果字节数组的长度小于 56，那么处理结果就等于在原始数据前面加上（128+字节数据的长度)的前缀。
-- 如果不是上面两种情况，那么处理结果就等于在原始数据前面加上原始数据长度的大端表示，然后在前面加上（183 + 原始数据大端表示的长度)
+- If the byte array contains only one byte, and the size of this byte is less than 128, then the data is not processed, and the result is the original data.
+- If the length of the byte array is less than 56, then the result of the processing is equal to the prefix of the original data (128 + bytes of data length).
+- If it is not the above two cases, then the result of the processing is equal to the big endian representation of the original data length in front of the original data, and then preceded by (183 + the length of the big end of the original data)
 
-下面使用公式化的语言来表示
+The following uses a formulated language to represent
 
 ![image](picture/rlp_3.png)
 
-**一些数学符号的解释**
+**Explanation of some mathematical symbols**
 
-- ||x|| 代表了求 x 的长度
-- (a).（b,c).(d,e) = (a,b,c,d,e) 代表了 concat 的操作，也就是字符串的相加操作。 "hello "+"world" = "hello world"
-- BE(x)函数其实是去掉了前导 0 的大端模式。 比如 4 个字节的整形 0x1234 用大端模式来表示是 00 00 12 34 那么用 BE 函数处理之后返回的其实是 12 34. 开头的多余的 00 被去掉了。
-- ^ 符号代表并且的含义。
-- "三"形式的等号代表恒等的意思
+- ||x|| represents the length of x
+- (a).(b,c).(d,e) = (a,b,c,d,e) Represents the operation of concat, which is the addition of strings. "hello "+"world" = "hello world"
+- The BE(x) function actually removes the big endian mode of the leading zero. For example, the 4-byte integer 0x1234 is represented by big endian mode as 00 00 12 34.  
+  Then the result returned by the BE function is actually 12 34. The extra 00 at the beginning is removed.
+- The ^ symbol represents the and operator
+- The equal sign of the "three" form represents the meaning of identity
 
-对于所有的其他类型(树形结构)， 我们定义如下的处理规则
+For all other types (tree structures), we define the following processing rules
 
-首先我们对树形结构里面的每一个元素使用 RLP 处理，然后再把这些结果 concat 连接起来。
+First we use RLP processing for each element in the tree structure, and then concatenate the results.
 
-- 如果连接后的字节长度小于 56， 那么我们就在连接后的结果前面加上(192 + 连接后的长度)，组成最终的结果。
-- 如果连接后的字节长度大于等于 56， 那么我们就在连接后的结果前面先加上连接后的长度的大端模式，然后在前面加上(247 + 连接后长度的大端模式的长度)
+- If the length of the connected byte is less than 56, then we add (192 + the length of the connection) in front of the result of the connection to form the final result.
+- If the length of the connected byte is greater than or equal to 56, then we add the big endian mode of the connected length before the result of the connection, and then add (247 + the length of the big endian mode of the length after the connection)
 
-下面使用公式化的语言来表示， 发现用公式阐述得清楚一点。
+The following is expressed in a formulaic language, and it is found that the formula is clearer.
 
-![image](picture/rlp_4.png)
-可以看到上面是一个递归的定义， 在求取 s(x)的过程中又调用了 RLP 方法，这样使得 RLP 能够处理递归的数据结构。
+![image](picture/rlp_4.png)  
+It can be seen that the above is a recursive definition, and the RLP method is called in the process of obtaining s(x), so that RLP can process the recursive data structure.
 
-如果使用 RLP 处理标量数据，RLP 只能够用来处理正整数。 RLP 只能处理大端模式处理后的整数。 也就是说如果是一个整数 x，那么先使用 BE(x)函数来把 x 转换成最简大端模式(去掉了开头的 00),然后把 BE(x)的结果当成是字节数组来进行编码。
+If RLP is used to process scalar data, RLP can only be used to process positive integers. RLP can only handle integers processed in big endian mode. That is to say, if it is an integer x, then use the BE(x) function to convert x to the simplest big endian mode (with the 00 at the beginning removed), and then encode the result of BE(x) as a byte array.
 
-如果用公式来表示就是下图。
+If you use the formula to represent it is the following figure.
 
 ![image](picture/rlp_5.png)
 
-当解析 RLP 数据的时候。如果刚好需要解析整形数据， 这个时候遇到了前导 00， 这个时候需要当作异常情况经行处理。
+When parsing RLP data. If you just need to parse the shaping data, this time you encounter the leading 00, this time you need to be treated as an exception.
 
-**总结**
+**Sum up**
 
-RLP 把所有的数据看成两类数据的组合， 一类是字节数组， 一类是类似于 List 的数据结构。 我理解这两类基本包含了所有的数据结构。 比如用得比较多的 struct。 可以看成是一个很多不同类型的字段组成的 List
+RLP treats all data as a combination of two types of data, one is a byte array, and the other is a data structure similar to List. I understand that these two classes basically contain all the data structures. For example, use more structs. Can be seen as a list of many different types of fields
 
-### RLP 源码解析
+### RLP source code analysis
 
-RLP 的源码不是很多， 主要分了三个文件
+The source code of RLP is not a lot, mainly divided into three files.
 
-    decode.go			解码器，把RLP数据解码为go的数据结构
-    decode_tail_test.go		解码器测试代码
-    decode_test.go			解码器测试代码
-    doc.go				文档代码
-    encode.go			编码器，把GO的数据结构序列化为字节数组
-    encode_test.go			编码器测试
+    decode.go			Decoder, decoding RLP data into a data structure of go
+    decode_tail_test.go		Decoder test code
+    decode_test.go			Decoder test code
+    doc.go				Document code
+    encode.go			Encoder that serializes the data structure of GO to a byte array
+    encode_test.go			Encoder test
     encode_example_test.go
-    raw.go				未解码的RLP数据
+    raw.go				Undecoded RLP data
     raw_test.go
-    typecache.go			类型缓存， 类型缓存记录了类型->(编码器|解码器)的内容。
+    typecache.go			Type cache, type cache records the contents of type -> (encoder | decoder).
 
-#### 如何根据类型找到对应的编码器和解码器 typecache.go
+#### How to find the corresponding encoder and decoder typecache.go according to the type
 
-在 C++或者 Java 等支持重载的语言中， 可以通过不同的类型重载同一个函数名称来实现方法针对不同类型的分派,比如， 也可以通过泛型来实现函数的分派。
+In languages ​​such as C++ or Java that support overloading, you can override the same function name by different types to implement methods for different types of dispatch. For example, you can also use generics to implement function dispatch.
+
+```c
 string encode(int);
 string encode(long);
-string encode(struct test\*)
+string encode(struct test*)
+```
 
-但是 GO 语言本身不支持重载， 也没有泛型，所以函数的分派就需要自己实现了。 typecache.go 主要是实现这个目的， 通过自身的类型来快速的找到自己的编码器函数和解码器函数。
+However, the GO language itself does not support overloading and there is no generics, so the assignment of functions needs to be implemented by itself. Typecache.go is mainly for this purpose, to quickly find its own encoder function and decoder function by its own type.
 
-我们首先看看核心数据结构
+Let's first look at the core data structure.
 
 ```go
 var (
-	typeCacheMutex sync.RWMutex                  //读写锁，用来在多线程的时候保护typeCache这个Map
-	typeCache      = make(map[typekey]*typeinfo) //核心数据结构，保存了类型->编解码器函数
+	// read-write lock, used to protect the typeCache map when multi-threaded
+	typeCacheMutex sync.RWMutex
+	typeCache      = make(map[typekey]*typeinfo) // Core data structure, save type -> codec function
 )
-type typeinfo struct { //存储了编码器和解码器函数
+type typeinfo struct { // Stores encoder and decoder functions
 	decoder
 	writer
 }
@@ -97,20 +102,20 @@ type typekey struct {
 }
 ```
 
-可以看到核心数据结构就是 typeCache 这个 Map， Map 的 key 是类型，value 是对应的编码和解码器。
+You can see that the core data structure is the typeCache map, the key of the Map is the type, and the value is the corresponding code and decoder.
 
-下面是用户如何获取编码器和解码器的函数
+Here's how the user gets the encoder and decoder functions.
 
 ```go
 func cachedTypeInfo(typ reflect.Type, tags tags) (*typeinfo, error) {
-	typeCacheMutex.RLock()		//加读锁来保护，
+	typeCacheMutex.RLock()		// Add a lock to protect,
 	info := typeCache[typekey{typ, tags}]
 	typeCacheMutex.RUnlock()
-	if info != nil { //如果成功获取到信息，那么就返回
+	if info != nil { // If the information is successfully obtained, then it will be returned
 		return info, nil
 	}
 	// not in the cache, need to generate info for this type.
-	typeCacheMutex.Lock()  //否则加写锁 调用cachedTypeInfo1函数创建并返回， 这里需要注意的是在多线程环境下有可能多个线程同时调用到这个地方，所以当你进入cachedTypeInfo1方法的时候需要判断一下是否已经被别的线程先创建成功了。
+	typeCacheMutex.Lock()  // Otherwise, add the write lock to call the cachedTypeInfo1 function to create and return. It should be noted that in a multi-threaded environment, it is possible for multiple threads to call to this place at the same time, so when you enter the cachedTypeInfo1 method, you need to determine whether it has been preceded by another thread. The creation was successful.
 	defer typeCacheMutex.Unlock()
 	return cachedTypeInfo1(typ, tags)
 }
@@ -119,13 +124,12 @@ func cachedTypeInfo1(typ reflect.Type, tags tags) (*typeinfo, error) {
 	key := typekey{typ, tags}
 	info := typeCache[key]
 	if info != nil {
-		// 其他的线程可能已经创建成功了， 那么我们直接获取到信息然后返回
+		// Other threads may have been created successfully, then we get the information directly and then return
 		return info, nil
 	}
 	// put a dummmy value into the cache before generating.
 	// if the generator tries to lookup itself, it will get
 	// the dummy value and won't call itself recursively.
-	//这个地方首先创建了一个值来填充这个类型的位置，避免遇到一些递归定义的数据类型形成死循环
 	typeCache[key] = new(typeinfo)
 	info, err := genTypeInfo(typ, tags)
 	if err != nil {
@@ -138,7 +142,7 @@ func cachedTypeInfo1(typ reflect.Type, tags tags) (*typeinfo, error) {
 }
 ```
 
-genTypeInfo 是生成对应类型的编解码器函数。
+genTypeInfo is a codec function that generates the corresponding type.
 
 ```go
 func genTypeInfo(typ reflect.Type, tags tags) (info *typeinfo, err error) {
@@ -153,7 +157,7 @@ func genTypeInfo(typ reflect.Type, tags tags) (info *typeinfo, err error) {
 }
 ```
 
-makeDecoder 的处理逻辑和 makeWriter 的处理逻辑大致差不多， 这里我就只贴出 makeWriter 的处理逻辑，
+The processing logic of makeDecoder is roughly the same as the processing logic of makeWriter. Here I only post the processing logic of makeWriter.
 
 ```go
 // makeWriter creates a writer function for the given type.
@@ -194,7 +198,7 @@ func makeWriter(typ reflect.Type, ts tags) (writer, error) {
 }
 ```
 
-可以看到就是一个 switch case,根据类型来分配不同的处理函数。 这个处理逻辑还是很简单的。针对简单类型很简单，根据黄皮书上面的描述来处理即可。 不过对于结构体类型的处理还是挺有意思的，而且这部分详细的处理逻辑在黄皮书上面也是找不到的。
+You can see that it is a switch case, assigning different handlers depending on the type. This processing logic is still very simple. It is very simple for the simple type, and it can be processed according to the description above in the yellow book. However, the handling of the structure type is quite interesting, and this part of the detailed processing logic can not be found in the Yellow Book.
 
 ```go
 type field struct {
@@ -209,7 +213,7 @@ func makeStructWriter(typ reflect.Type) (writer, error) {
 	writer := func(val reflect.Value, w *encbuf) error {
 		lh := w.list()
 		for _, f := range fields {
-			//f是field结构， f.info是typeinfo的指针， 所以这里其实是调用字段的编码器方法。
+			// f is the field structure, f.info is a pointer to typeinfo, so here is actually the encoder method that calls the field.
 			if err := f.info.writer(val.Field(f.index), w); err != nil {
 				return err
 			}
@@ -221,7 +225,7 @@ func makeStructWriter(typ reflect.Type) (writer, error) {
 }
 ```
 
-这个函数定义了结构体的编码方式， 通过 structFields 方法得到了所有的字段的编码器， 然后返回一个方法，这个方法遍历所有的字段，每个字段调用其编码器方法。
+This function defines the encoding of the structure. The structFields method gets the encoder for all the fields, and then returns a method that iterates over all the fields, each of which calls its encoder method.
 
 ```go
 func structFields(typ reflect.Type) (fields []field, err error) {
@@ -245,11 +249,11 @@ func structFields(typ reflect.Type) (fields []field, err error) {
 }
 ```
 
-structFields 函数遍历所有的字段，然后针对每一个字段调用 cachedTypeInfo1。 可以看到这是一个递归的调用过程。 上面的代码中有一个需要注意的是 f.PkgPath == "" 这个判断针对的是所有导出的字段， 所谓的导出的字段就是说以大写字母开头命令的字段。
+The structFields function iterates over all the fields and then calls cachedTypeInfo1 for each field. You can see that this is a recursive calling process. One of the above code to note is that f.PkgPath == "" This is for all exported fields. The so-called exported field is the field that starts with an uppercase letter.
 
-#### 编码器 encode.go
+#### encode.go
 
-首先定义了空字符串和空 List 的值，分别是 0x80 和 0xC0。 注意，整形的 0 值的对应值也是 0x80。这个在黄皮书上面是没有看到有定义的。 然后定义了一个接口类型给别的类型实现 EncodeRLP
+First define the values ​​of the empty string and the empty List, which are 0x80 and 0xC0. Note that the corresponding value of the shaped 0 value is also 0x80. This is not defined above the yellow book. Then define an interface type to implement EncodeRLP for other types.
 
 ```go
 var (
@@ -274,7 +278,7 @@ type Encoder interface {
 }
 ```
 
-然后定义了一个最重要的方法， 大部分的 EncodeRLP 方法都是直接调用了这个方法 Encode 方法。这个方法首先获取了一个 encbuf 对象。 然后调用这个对象的 encode 方法。encode 方法中，首先获取了对象的反射类型，根据反射类型获取它的编码器，然后调用编码器的 writer 方法。 这个就跟上面谈到的 typecache 联系到一起了。
+Then define one of the most important methods, most of the EncodeRLP methods directly call this method Encode method. This method first gets an encbuf object. Then call the object's encode method. In the encode method, the object's reflection type is first obtained, its encoder is obtained according to the reflection type, and then the encoder's writer method is called. This is related to the typecache mentioned above.
 
 ```go
 func Encode(w io.Writer, val interface{}) error {
@@ -301,9 +305,9 @@ func (w *encbuf) encode(val interface{}) error {
 }
 ```
 
-##### encbuf 的介绍
+##### encbuf Introduction
 
-encbuf 是 encode buffer 的简写(我猜的)。encbuf 出现在 Encode 方法，和很多 Writer 方法中。顾名思义，这个是在 encode 的过程中充当 buffer 的作用。下面先看看 encbuf 的定义。
+Encbuf is short for encode buffer (I guess). Encbuf appears in the Encode method, and in many Writer methods. As the name implies, this acts as a buffer during the encoding process. Let's take a look at the definition of encbuf.
 
 ```go
 type encbuf struct {
@@ -319,29 +323,29 @@ type listhead struct {
 }
 ```
 
-从注释可以看到， str 字段包含了所有的内容，除了列表的头部。 列表的头部记录在 lheads 字段中。 lhsize 字段记录了 lheads 的长度， sizebuf 是 9 个字节大小的辅助 buffer，专门用来处理 uint 的编码的。 listhead 由两个字段组成， offset 字段记录了列表数据在 str 字段的哪个位置， size 字段记录了包含列表头的编码后的数据的总长度。可以看到下面的图。
+As you can see from the comments, the str field contains all the content except the head of the list. The head of the list is recorded in the lheads field. The lhsize field records the length of lheads, and the sizebuf is a 9-byte auxiliary buffer designed to handle the encoding of uint. The listhead consists of two fields, the offset field records where the list data is in the str field, and the size field records the total length of the encoded data containing the list header. You can see the picture below
 
 ![image](picture/rlp_6.png)
 
-对于普通的类型，比如字符串，整形，bool 型等数据，就是直接往 str 字段里面填充就行了。 但是对于结构体类型的处理， 就需要特殊的处理方式了。可以看看上面提到过的 makeStructWriter 方法。
+For ordinary types, such as string, integer, bool type and other data, it is directly filled into the str field. However, for the processing of structure types, special processing methods are required. Take a look at the makeStructWriter method mentioned above.
 
 ```go
 func makeStructWriter(typ reflect.Type) (writer, error) {
-		fields, err := structFields(typ)
-		...
-		writer := func(val reflect.Value, w *encbuf) error {
-			lh := w.list()
-			for _, f := range fields {
-				if err := f.info.writer(val.Field(f.index), w); err != nil {
-					return err
-				}
+	fields, err := structFields(typ)
+	...
+	writer := func(val reflect.Value, w *encbuf) error {
+		lh := w.list()
+		for _, f := range fields {
+			if err := f.info.writer(val.Field(f.index), w); err != nil {
+				return err
 			}
-			w.listEnd(lh)
 		}
+		w.listEnd(lh)
 	}
+}
 ```
 
-可以看到上面的代码中体现了处理结构体数据的特殊处理方法，就是首先调用 w.list()方法，处理完毕之后再调用 listEnd(lh)方法。 采用这种方式的原因是我们在刚开始处理结构体的时候，并不知道处理后的结构体的长度有多长，因为需要根据结构体的长度来决定头的处理方式(回忆一下黄皮书里面结构体的处理方式)，所以我们在处理前记录好 str 的位置，然后开始处理每个字段，处理完之后在看一下 str 的数据增加了多少就知道处理后的结构体长度有多长了。
+You can see that the above code reflects the special processing method for processing structure data, that is, first call the w.list() method, and then call the listEnd(lh) method after processing. The reason for adopting this method is that we do not know how long the length of the processed structure is when we first start processing the structure, because it is necessary to determine the processing method of the head according to the length of the structure (recall the structure inside the yellow book) The way the body is processed), so we record the position of str before processing, and then start processing each field. After processing, we will see how much the length of the processed structure is after looking at the data of str.
 
 ```go
 func (w *encbuf) list() *listhead {
@@ -351,7 +355,7 @@ func (w *encbuf) list() *listhead {
 }
 
 func (w *encbuf) listEnd(lh *listhead) {
-	lh.size = w.size() - lh.offset - lh.size    //lh.size记录了list开始的时候的队列头应该占用的长度 w.size()返回的是str的长度加上lhsize
+	lh.size = w.size() - lh.offset - lh.size    // lh.size records the length of the queue header that should be occupied when the list starts. w.size() returns the length of str plus lhsize
 	if lh.size < 56 {
 		w.lhsize += 1 // length encoded into kind tag
 	} else {
@@ -363,7 +367,7 @@ func (w *encbuf) size() int {
 }
 ```
 
-然后我们可以看看 encbuf 最后的处理逻辑，会对 listhead 进行处理，组装成完整的 RLP 数据
+Then we can look at the final processing logic of encbuf, process the listhead and assemble it into complete RLP data.
 
 ```go
 func (w *encbuf) toBytes() []byte {
@@ -385,9 +389,9 @@ func (w *encbuf) toBytes() []byte {
 }
 ```
 
-##### writer 介绍
+##### writer
 
-剩下的流程其实比较简单了。 就是根据黄皮书针把每种不同的数据填充到 encbuf 里面去。
+The rest of the process is actually quite simple. It is based on the yellow book to fill each different data into the encbuf.
 
 ```go
 func writeBool(val reflect.Value, w *encbuf) error {
@@ -398,6 +402,7 @@ func writeBool(val reflect.Value, w *encbuf) error {
 	}
 	return nil
 }
+
 func writeString(val reflect.Value, w *encbuf) error {
 	s := val.String()
 	if len(s) == 1 && s[0] <= 0x7f {
@@ -411,9 +416,9 @@ func writeString(val reflect.Value, w *encbuf) error {
 }
 ```
 
-#### 解码器 decode.go
+#### decode.go
 
-解码器的大致流程和编码器差不多，理解了编码器的大致流程，也就知道了解码器的大致流程。
+The general flow of the decoder is similar to that of the encoder. Understand the general flow of the encoder and know the general flow of the decoder.
 
 ```go
 func (s *Stream) Decode(val interface{}) error {
@@ -476,7 +481,7 @@ func makeDecoder(typ reflect.Type, tags tags) (dec decoder, err error) {
 }
 ```
 
-我们同样通过结构体类型的解码过程来查看具体的解码过程。跟编码过程差不多，首先通过 structFields 获取需要解码的所有字段，然后每个字段进行解码。 跟编码过程差不多有一个 List()和 ListEnd()的操作，不过这里的处理流程和编码过程不一样，后续章节会详细介绍。
+We also look at the specific decoding process through the decoding process of the structure type. Similar to the encoding process, first get all the fields that need to be decoded through structFields, and then decode each field. There is almost a List() and ListEnd() operation with the encoding process, but the processing flow here is not the same as the encoding process, which will be described in detail in subsequent chapters.
 
 ```go
 func makeStructDecoder(typ reflect.Type) (decoder, error) {
@@ -502,7 +507,7 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 }
 ```
 
-下面在看字符串的解码过程，因为不同长度的字符串有不同方式的编码，我们可以通过前缀的不同来获取字符串的类型， 这里我们通过 s.Kind()方法获取当前需要解析的类型和长度，如果是 Byte 类型，那么直接返回 Byte 的值， 如果是 String 类型那么读取指定长度的值然后返回。 这就是 kind()方法的用途。
+Let's look at the decoding process of strings. Because strings of different lengths have different ways of encoding, we can get the type of the string by the difference of the prefix. Here we get the type that needs to be parsed by s.Kind() method. The length, if it is a Byte type, directly returns the value of Byte. If it is a String type, it reads the value of the specified length and returns. This is the purpose of the kind() method.
 
 ```go
 func (s *Stream) Bytes() ([]byte, error) {
@@ -529,10 +534,9 @@ func (s *Stream) Bytes() ([]byte, error) {
 }
 ```
 
-##### Stream 结构分析
+##### Stream structure
 
-解码器的其他代码和编码器的结构差不多， 但是有一个特殊的结构是编码器里面没有的。那就是 Stream。
-这个是用来读取用流式的方式来解码 RLP 的一个辅助类。 前面我们讲到了大致的解码流程就是首先通过 Kind()方法获取需要解码的对象的类型和长度,然后根据长度和类型进行数据的解码。 那么我们如何处理结构体的字段又是结构体的数据呢， 回忆我们对结构体进行处理的时候，首先调用 s.List()方法，然后对每个字段进行解码，最后调用 s.EndList()方法。 技巧就在这两个方法里面， 下面我们看看这两个方法。
+The other code of the decoder is similar to the structure of the encoder, but there is a special structure that is not in the encoder. That is Stream. This is a helper class for reading RLP in a streaming manner. Earlier we talked about the general decoding process is to first get the type and length of the object to be decoded through the Kind () method, and then decode the data according to the length and type. So how do we deal with the structure's fields and the structure's data? Recall that when we process the structure, we first call the s.List() method, then decode each field, and finally call s.EndList(). method. The trick is in these two methods. Let's take a look at these two methods.
 
 ```go
 type Stream struct {
@@ -551,7 +555,7 @@ type Stream struct {
 type listpos struct{ pos, size uint64 }
 ```
 
-Stream 的 List 方法，当调用 List 方法的时候。我们先调用 Kind 方法获取类型和长度，如果类型不匹配那么就抛出错误，然后我们把一个 listpos 对象压入到堆栈，这个对象是关键。 这个对象的 pos 字段记录了当前这个 list 已经读取了多少字节的数据， 所以刚开始的时候肯定是 0. size 字段记录了这个 list 对象一共需要读取多少字节数据。这样我在处理后续的每一个字段的时候，每读取一些字节，就会增加 pos 这个字段的值，处理到最后会对比 pos 字段和 size 字段是否相等，如果不相等，那么会抛出异常。
+Stream's List method when calling the List method. We first call the Kind method to get the type and length. If the type doesn't match, we throw an error. Then we push a listpos object onto the stack. This object is the key. The pos field of this object records how many bytes of data the current list has read, so it must be 0 at the beginning. The size field records how many bytes of data the list object needs to read. So when I process each subsequent field, every time I read some bytes, it will increase the value of the pos field. After processing, it will compare whether the pos field and the size field are equal. If they are not equal, an exception will be thrown. .
 
 ```go
 func (s *Stream) List() (size uint64, err error) {
@@ -569,7 +573,7 @@ func (s *Stream) List() (size uint64, err error) {
 }
 ```
 
-Stream 的 ListEnd 方法，如果当前读取的数据数量 pos 不等于声明的数据长度 size，抛出异常，然后对堆栈进行 pop 操作，如果当前堆栈不为空，那么就在堆栈的栈顶的 pos 加上当前处理完毕的数据长度(用来处理这种情况--结构体的字段又是结构体， 这种递归的结构)
+Stream's ListEnd method, if the current number of data read pos is not equal to the declared data length size, throw an exception, and then pop the stack, if the current stack is not empty, then add pos at the top of the stack The length of the currently processed data (used to handle this situation - the structure's field is the structure, this recursive structure)
 
 ```go
 func (s *Stream) ListEnd() error {

@@ -1,16 +1,16 @@
-p2p 包实现了通用的 p2p 网络协议。包括节点的查找，节点状态的维护，节点连接的建立等 p2p 的功能。p2p 包实现的是通用的 p2p 协议。 某一种具体的协议(比如 eth 协议。 whisper 协议。 swarm 协议)被封装成特定的接口注入 p2p 包。所以 p2p 内部不包含具体协议的实现。 只完成了 p2p 网络应该做的事情。
+The p2p package implements the generic p2p network protocol. It includes the functions of p2p such as node lookup, node state maintenance, and node connection establishment. The p2p package implements the generic p2p protocol. A specific protocol (such as the eth protocol. whisper protocol. swarm protocol) is encapsulated into a specific interface to inject p2p packets. Therefore, p2p does not contain the implementation of a specific protocol. Only completed what the p2p network should do.
 
-## discover / discv5 节点发现
+## discover / discv5 node discovery
 
-目前使用的包是 discover。 discv5 是最近才开发的功能，还是属于实验性质，基本上是 discover 包的一些优化。 这里我们暂时只分析 discover 的代码。 对其完成的功能做一个基本的介绍。
+The package currently in use is discover. Discv5 is a recently developed feature that is experimental in nature and is basically some optimization of the discover package. Here we only analyze the code of the discovery for the time being. A basic introduction to the functions that are completed.
 
 ### database.go
 
-顾名思义，这个文件内部主要实现了节点的持久化，因为 p2p 网络节点的节点发现和维护都是比较花时间的，为了反复启动的时候，能够把之前的工作继承下来，避免每次都重新发现。 所以持久化的工作是必须的。
+As the name suggests, this file mainly implements the persistence of nodes, because the node discovery and maintenance of p2p network nodes are relatively time-consuming. In order to repeatedly start, the previous work can be inherited to avoid rediscovery every time. So persistent work is a must.
 
-之前我们分析了 ethdb 的代码和 trie 的代码，trie 的持久化工作使用了 leveldb。 这里同样也使用了 leveldb。 不过 p2p 的 leveldb 实例和主要的区块链的 leveldb 实例不是同一个。
+Previously we analyzed the code for ethdb and the code for trie, and the persistence of trie used leveldb. Leveldb is also used here. However, the leveldb instance of p2p is not the same as the leveldb instance of the main blockchain.
 
-newNodeDB,根据参数 path 来看打开基于内存的数据库，还是基于文件的数据库。
+newNodeDB, open the memory-based database based on the parameter path, or a file-based database.
 
 ```go
 // newNodeDB creates a new node database for storing and retrieving infos about
@@ -22,6 +22,7 @@ func newNodeDB(path string, version int, self NodeID) (*nodeDB, error) {
 	}
 	return newPersistentNodeDB(path, version, self)
 }
+
 // newMemoryNodeDB creates a new in-memory node database without a persistent
 // backend.
 func newMemoryNodeDB(self NodeID) (*nodeDB, error) {
@@ -61,7 +62,6 @@ func newPersistentNodeDB(path string, version int, self NodeID) (*nodeDB, error)
 		}
 	case nil:
 		// Version present, flush if different
-		//版本不同，先删除所有的数据库文件，重新创建一个。
 		if !bytes.Equal(blob, currentVer) {
 			db.Close()
 			if err = os.RemoveAll(path); err != nil {
@@ -78,7 +78,7 @@ func newPersistentNodeDB(path string, version int, self NodeID) (*nodeDB, error)
 }
 ```
 
-Node 的存储，查询和删除
+Node storage, query and delete
 
 ```go
 // node retrieves a node with a given id from the database.
@@ -117,7 +117,7 @@ func (db *nodeDB) deleteNode(id NodeID) error {
 }
 ```
 
-Node 的结构
+Node structure
 
 ```go
 type Node struct {
@@ -136,14 +136,12 @@ type Node struct {
 }
 ```
 
-节点超时处理
+Node timeout processing
 
 ```go
 // ensureExpirer is a small helper method ensuring that the data expiration
 // mechanism is running. If the expiration goroutine is already running, this
 // method simply returns.
-// ensureExpirer方法用来确保expirer方法在运行。 如果expirer已经运行，那么这个方法就直接返回。
-// 这个方法设置的目的是为了在网络成功启动后在开始进行数据超时丢弃的工作(以防一些潜在的有用的种子节点被丢弃)。
 // The goal is to start the data evacuation only after the network successfully
 // bootstrapped itself (to prevent dumping potentially useful seed nodes). Since
 // it would require significant overhead to exactly trace the first successful
@@ -172,7 +170,6 @@ func (db *nodeDB) expirer() {
 
 // expireNodes iterates over the database and deletes all nodes that have not
 // been seen (i.e. received a pong from) for some allotted time.
-//这个方法遍历所有的节点，如果某个节点最后接收消息超过指定值，那么就删除这个节点。
 func (db *nodeDB) expireNodes() error {
 	threshold := time.Now().Add(-nodeDBNodeExpiration)
 
@@ -199,7 +196,7 @@ func (db *nodeDB) expireNodes() error {
 }
 ```
 
-一些状态更新函数
+Some state update functions
 
 ```go
 // lastPing retrieves the time of the last ping packet send to a remote node,
@@ -234,7 +231,7 @@ func (db *nodeDB) updateFindFails(id NodeID, fails int) error {
 }
 ```
 
-从数据库里面随机挑选合适种子节点
+Randomly pick the appropriate seed node from the database
 
 ```go
 // querySeeds retrieves random nodes to be used as potential seed nodes

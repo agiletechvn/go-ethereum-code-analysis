@@ -1,6 +1,6 @@
-在 p2p 代码里面。 peer 代表了一条创建好的网络链路。在一条链路上可能运行着多个协议。比如以太坊的协议(eth)。 Swarm 的协议。 或者是 Whisper 的协议。
+Inside the p2p code. The peer represents a created network link. Multiple protocols may be running on a single link. For example, the agreement of Ethereum (eth). Swarm's agreement. Or the agreement of Whisper.
 
-peer 的结构
+peer structure
 
 ```go
 type protoRW struct {
@@ -48,7 +48,7 @@ type Protocol struct {
 // Peer represents a connected remote node.
 type Peer struct {
 	rw      *conn
-	running map[string]*protoRW   //运行的协议
+	running map[string]*protoRW   // Operating agreement
 	log     log.Logger
 	created mclock.AbsTime
 
@@ -62,7 +62,7 @@ type Peer struct {
 }
 ```
 
-peer 的创建，根据匹配找到当前 Peer 支持的 protomap
+Peer creation, find the protomap supported by the current Peer based on the match
 
 ```go
 func newPeer(conn *conn, protocols []Protocol) *Peer {
@@ -80,12 +80,12 @@ func newPeer(conn *conn, protocols []Protocol) *Peer {
 }
 ```
 
-peer 的启动， 启动了两个 goroutine 线程。 一个是读取。一个是执行 ping 操作。
+The start of the peer starts two goroutine threads. One is reading. One is to perform a ping.
 
 ```go
 func (p *Peer) run() (remoteRequested bool, err error) {
 	var (
-		writeStart = make(chan struct{}, 1)  //用来控制什么时候可以写入的管道。
+		writeStart = make(chan struct{}, 1)  // A channel used to control when a write can be made.
 		writeErr   = make(chan error, 1)
 		readErr    = make(chan error, 1)
 		reason     DiscReason // sent to the peer
@@ -96,7 +96,7 @@ func (p *Peer) run() (remoteRequested bool, err error) {
 
 	// Start all protocol handlers.
 	writeStart <- struct{}{}
-	//启动所有的协议。
+	// Start all the protocols.
 	p.startProtocols(writeStart, writeErr)
 
 	// Wait for an error or disconnect.
@@ -134,7 +134,7 @@ loop:
 }
 ```
 
-startProtocols 方法，这个方法遍历所有的协议。
+The startProtocols method, which traverses all protocols.
 
 ```go
 func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error) {
@@ -149,9 +149,9 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 			rw = newMsgEventer(rw, p.events, p.ID(), proto.Name)
 		}
 		p.log.Trace(fmt.Sprintf("Starting protocol %s/%d", proto.Name, proto.Version))
-		// 等于这里为每一个协议都开启了一个goroutine。 调用其Run方法。
+		// This is equivalent to opening a goroutine for each protocol. Call its Run method.
 		go func() {
-			// proto.Run(p, rw)这个方法应该是一个死循环。 如果返回就说明遇到了错误。
+			// proto.Run(p, rw) This method should be an infinite loop. If you return, you have encountered an error.
 			err := proto.Run(p, rw)
 			if err == nil {
 				p.log.Trace(fmt.Sprintf("Protocol %s/%d returned", proto.Name, proto.Version))
@@ -166,7 +166,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 }
 ```
 
-回过头来再看看 readLoop 方法。 这个方法也是一个死循环。 调用 p.rw 来读取一个 Msg(这个 rw 实际是之前提到的 frameRLPx 的对象，也就是分帧之后的对象。然后根据 Msg 的类型进行对应的处理，如果 Msg 的类型是内部运行的协议的类型。那么发送到对应协议的 proto.in 队列上面。
+Go back and look at the **readLoop** method. This method is also an infinite loop. Call p.rw to read an Msg (this rw is actually the object of the frameRLPx mentioned earlier, that is, the object after the frame is divided. Then the corresponding processing is performed according to the type of Msg, if the type of Msg is the protocol of the internal running Type. Then send it to the proto.in queue of the corresponding protocol.
 
 ```go
 func (p *Peer) readLoop(errc chan<- error) {
@@ -217,7 +217,7 @@ func (p *Peer) handle(msg Msg) error {
 }
 ```
 
-在看看 pingLoop。这个方法很简单。就是定时的发送 pingMsg 消息到对端。
+Take a look at **pingLoop**. This method is very simple. It is time to send a pingMsg message to the peer.
 
 ```go
 func (p *Peer) pingLoop() {
@@ -239,7 +239,7 @@ func (p *Peer) pingLoop() {
 }
 ```
 
-最后再看看 protoRW 的 read 和 write 方法。 可以看到读取和写入都是阻塞式的。
+Finally, take a look at the read and write methods of protoRW. You can see that both reads and writes are blocking.
 
 ```go
 func (rw *protoRW) WriteMsg(msg Msg) (err error) {
@@ -248,7 +248,7 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 	}
 	msg.Code += rw.offset
 	select {
-	case <-rw.wstart:  //等到可以写入的受在执行写入。 这难道是为了多线程控制么。
+	case <-rw.wstart:  // Wait until the write is executable. Is this for multi-threaded control?
 		err = rw.w.WriteMsg(msg)
 		// Report write status back to Peer.run. It will initiate
 		// shutdown if the error is non-nil and unblock the next write

@@ -1,17 +1,19 @@
-# 封装的一些基础工具
-在[以太坊](https://github.com/ethereum/go-ethereum)项目中，存在对golang生态体系中一些优秀工具进行封装的小模块，由于功能较为单一，单独成篇显得过于单薄。但是由于以太坊对这些小工具的封装非常优雅，具有很强的独立性和实用性。我们在此作一些分析，至少对于熟悉以太坊源码的编码方式是有帮助的。
-## metrics（探针）
-在[ethdb源码分析](/ethdb源码分析.md)中，我们看到了对[goleveldb](https://github.com/syndtr/goleveldb)项目的封装。ethdb除了对goleveldb抽象了一层：
+# Some basic tools for packaging
+
+In [go-ethereum](https://github.com/ethereum/go-ethereum) project, there is a small module golang ecosystem in some excellent tools package, due to the simple function, a chapter alone far too thin. However, because Ethereum's packaging of these gadgets is very elegant, it has strong independence and practicality. We do some analysis here, at least for the familiarity with the encoding of the Ethereum source code.
+
+## metrics
+
+In [ethdb-analysis](./ethdb-analysis.md), we saw the encapsulation of the[goleveldb](https://github.com/syndtr/goleveldb)project. Ethdb abstracts a layer on goleveldb.
 
 [type Database interface](https://github.com/ethereum/go-ethereum/blob/master/ethdb/interface.go#L29)
 
-以支持与MemDatabase的同接口使用互换外，还在LDBDatabase中使用很多[gometrics](https://github.com/rcrowley/go-metrics)包下面的探针工具，以及能启动一个goroutine执行
+In order to support the use of the same interface with MemDatabase, it also uses a lot of probe tools under the gometrics package in LDBDatabase , and can start a goroutine execution.
 
-[go db.meter(3 * time.Second)](https://github.com/ethereum/go-ethereum/blob/master/ethdb/database.go#L198)
+[go db.meter(3 \* time.Second)](https://github.com/ethereum/go-ethereum/blob/master/ethdb/database.go#L198)
 
-以3秒为周期，收集使用goleveldb过程中的延时和I/O数据量等指标。看起来很方便，但问题是我们如何使用这些收集来的信息呢？
+Collect the delay and I/O data volume in the goleveldb process in a 3-second cycle. It seems convenient, but the question is how do we use the information we collect?
 
-## log（日志）
-golang的内置log包一直被作为槽点，而以太坊项目也不例外。故引入了[log15](https://github.com/inconshreveable/log15)以解决日志使用不便的问题。
+## log
 
-
+Golang's built-in log package has always been used as a slot, and the Ethereum project is no exception. Therefore [log15](https://github.com/inconshreveable/log15) was introduced to solve the problem of inconvenient log usage.

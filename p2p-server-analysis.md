@@ -1,9 +1,8 @@
-server 是 p2p 的最主要的部分。集合了所有之前的组件。
+Server is the main part of p2p. All previous components are assembled.
 
-首先看看 Server 的结构
+First look at the structure of the Server
 
 ```go
-
 // Server manages all peer connections.
 type Server struct {
 	// Config fields may not be modified while the server is running.
@@ -64,7 +63,7 @@ type transport interface {
 }
 ```
 
-并不存在一个 newServer 的方法。 初始化的工作放在 Start()方法中。
+There is no way for a newServer. The initialization work is placed in the Start() method.
 
 ```go
 // Start starts running the server.
@@ -72,7 +71,7 @@ type transport interface {
 func (srv *Server) Start() (err error) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
-	if srv.running { //避免多次启动。 srv.lock为了避免多线程重复启动
+	if srv.running { // Avoid multiple starts. Srv.lock in order to avoid multi-threaded repeated startup
 		return errors.New("server already running")
 	}
 	srv.running = true
@@ -82,10 +81,10 @@ func (srv *Server) Start() (err error) {
 	if srv.PrivateKey == nil {
 		return fmt.Errorf("Server.PrivateKey must be set to a non-nil key")
 	}
-	if srv.newTransport == nil {		//这里注意的是Transport使用了newRLPX 使用了rlpx.go中的网络协议。
+	if srv.newTransport == nil {		// Note here that Transport uses newRLPX to use the network protocol in rlpx.go.
 		srv.newTransport = newRLPX
 	}
-	if srv.Dialer == nil { //使用了TCLPDialer
+	if srv.Dialer == nil { // Used TCLPDialer
 		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
 	}
 	srv.quit = make(chan struct{})
@@ -98,19 +97,19 @@ func (srv *Server) Start() (err error) {
 	srv.peerOpDone = make(chan struct{})
 
 	// node table
-	if !srv.NoDiscovery {  //启动discover网络。 开启UDP的监听。
+	if !srv.NoDiscovery {  // Start the discovery network. Enable UDP listening.
 		ntab, err := discover.ListenUDP(srv.PrivateKey, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
 		if err != nil {
 			return err
 		}
-		//设置最开始的启动节点。当找不到其他的节点的时候。 那么就连接这些启动节点。这些节点的信息是写死在配置文件里面的。
+		// Set the initial startup node. When no other nodes are found. Then connect these boot nodes. The information of these nodes is written in the configuration file.
 		if err := ntab.SetFallbackNodes(srv.BootstrapNodes); err != nil {
 			return err
 		}
 		srv.ntab = ntab
 	}
 
-	if srv.DiscoveryV5 {//这是新的节点发现协议。 暂时还没有使用。  这里暂时没有分析。
+	if srv.DiscoveryV5 {// This is the new node discovery protocol. It has not been used yet. There is no analysis here.
 		ntab, err := discv5.ListenUDP(srv.PrivateKey, srv.DiscoveryV5Addr, srv.NAT, "", srv.NetRestrict) //srv.NodeDatabase)
 		if err != nil {
 			return err
@@ -125,18 +124,17 @@ func (srv *Server) Start() (err error) {
 	if srv.NoDiscovery {
 		dynPeers = 0
 	}
-	//创建dialerstate。
+	// Create dialerstate.
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict)
 
-	// handshake
-	//我们自己的协议的handShake
+	// create handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
-	for _, p := range srv.Protocols {//增加所有的协议的Caps
+	for _, p := range srv.Protocols {// Add Caps for all protocols
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
 	// listen/dial
 	if srv.ListenAddr != "" {
-		//开始监听TCP端口
+		// Start listening to the TCP port
 		if err := srv.startListening(); err != nil {
 			return err
 		}
@@ -146,14 +144,14 @@ func (srv *Server) Start() (err error) {
 	}
 
 	srv.loopWG.Add(1)
-	//启动goroutine 来处理程序。
+	// Start the goroutine to handle the program.
 	go srv.run(dialer)
 	srv.running = true
 	return nil
 }
 ```
 
-启动监听。 可以看到是 TCP 协议。 这里的监听端口和 UDP 的端口是一样的。 默认都是 30303
+Start monitoring. It can be seen that it is the TCP protocol. The listening port here is the same as the UDP port. The default is 30303
 
 ```go
 func (srv *Server) startListening() error {
@@ -179,7 +177,7 @@ func (srv *Server) startListening() error {
 }
 ```
 
-listenLoop()。 这是一个死循环的 goroutine。 会监听端口并接收外部的请求。
+listenLoop(). This is an infinite loop of goroutine. Will listen on the port and receive external requests.
 
 ```go
 // listenLoop runs in its own goroutine and accepts
@@ -195,9 +193,9 @@ func (srv *Server) listenLoop() {
 	if srv.MaxPendingPeers > 0 {
 		tokens = srv.MaxPendingPeers
 	}
-	//创建maxAcceptConns个槽位。 我们只同时处理这么多连接。 多了也不要。
+	// Create maxAcceptConns slots. We only handle so many connections at the same time. Don't want more.
 	slots := make(chan struct{}, tokens)
-	//把槽位填满。
+	// Fill the slot.
 	for i := 0; i < tokens; i++ {
 		slots <- struct{}{}
 	}
@@ -223,7 +221,6 @@ func (srv *Server) listenLoop() {
 		}
 
 		// Reject connections that do not match NetRestrict.
-		// 白名单。 如果不在白名单里面。那么关闭连接。
 		if srv.NetRestrict != nil {
 			if tcp, ok := fd.RemoteAddr().(*net.TCPAddr); ok && !srv.NetRestrict.Contains(tcp.IP) {
 				log.Debug("Rejected conn (not whitelisted in NetRestrict)", "addr", fd.RemoteAddr())
@@ -239,7 +236,6 @@ func (srv *Server) listenLoop() {
 		// Spawn the handler. It will give the slot back when the connection
 		// has been established.
 		go func() {
-			//看来只要连接建立完成之后。 槽位就会归还。 SetupConn这个函数我们记得再dialTask.Do里面也有调用， 这个函数主要是执行连接的几次握手。
 			srv.SetupConn(fd, inboundConn, nil)
 			slots <- struct{}{}
 		}()
@@ -247,7 +243,7 @@ func (srv *Server) listenLoop() {
 }
 ```
 
-SetupConn,这个函数执行握手协议，并尝试把连接创建位一个 peer 对象。
+SetupConn, this function performs the handshake protocol and attempts to create a peer object for the connection.
 
 ```go
 // SetupConn runs the handshakes and attempts to add the connection
@@ -258,7 +254,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	srv.lock.Lock()
 	running := srv.running
 	srv.lock.Unlock()
-	//创建了一个conn对象。 newTransport指针实际上指向的newRLPx方法。 实际上是把fd用rlpx协议包装了一下。
+	// Created a conn object. The newTransport pointer actually points to the newRLPx method. In fact, fd is packaged with the rlpx protocol.
 	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, cont: make(chan error)}
 	if !running {
 		c.close(errServerStopped)
@@ -266,7 +262,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 	// Run the encryption handshake.
 	var err error
-	//这里实际上执行的是rlpx.go里面的doEncHandshake.因为transport是conn的一个匿名字段。 匿名字段的方法会直接作为conn的一个方法。
+	// The actual implementation here is doEncHandshake in rlpx.go. Because transport is an anonymous field of conn. The method of anonymous fields will be used directly as a method of conn.
 	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
 		log.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		c.close(err)
@@ -274,14 +270,13 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 	clog := log.New("id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags)
 	// For dialed connections, check that the remote public key matches.
-	// 如果连接握手的ID和对应的ID不匹配
 	if dialDest != nil && c.id != dialDest.ID {
 		c.close(DiscUnexpectedIdentity)
 		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
 		return
 	}
-	// 这个checkpoint其实就是把第一个参数发送给第二个参数指定的队列。然后从c.cout接收返回信息。 是一个同步的方法。
-	//至于这里，后续的操作只是检查了一下连接是否合法就返回了。
+	// This checkpoint is actually sending the first parameter to the queue specified by the second parameter. Then receive the return message from c.cout. Is a synchronous method.
+	// As for this, the subsequent operation just checks if the connection is legal and returns.
 	if err := srv.checkpoint(c, srv.posthandshake); err != nil {
 		clog.Trace("Rejected peer before protocol handshake", "err", err)
 		c.close(err)
@@ -300,7 +295,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 	c.caps, c.name = phs.Caps, phs.Name
-	// 这里两次握手都已经完成了。 把c发送给addpeer队列。 后台处理这个队列的时候，会处理这个连接
+	// The two handshakes have been completed here. Send c to the addpeer queue. This connection is handled when the queue is processed in the background.
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
 		clog.Trace("Rejected peer", "err", err)
 		c.close(err)
@@ -311,7 +306,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 }
 ```
 
-上面说到的流程是 listenLoop 的流程，listenLoop 主要是用来接收外部主动连接者的。 还有部分情况是节点需要主动发起连接来连接外部节点的流程。 以及处理刚才上面的 checkpoint 队列信息的流程。这部分代码都在 server.run 这个 goroutine 里面。
+The process mentioned above is the process of listenLoop, and listenLoop is mainly used to receive external active connecters. There are also cases where the node needs to initiate a connection to connect to the external node. And the process of processing the checkpoint queue information just above. This part of the code is in the goroutine of server.run
 
 ```go
 func (srv *Server) run(dialstate dialer) {
@@ -326,13 +321,11 @@ func (srv *Server) run(dialstate dialer) {
 	// Put trusted nodes into a map to speed up checks.
 	// Trusted peers are loaded on startup and cannot be
 	// modified while the server is running.
-	// 被信任的节点又这样一个特性， 如果连接太多，那么其他节点会被拒绝掉。但是被信任的节点会被接收。
 	for _, n := range srv.TrustedNodes {
 		trusted[n.ID] = true
 	}
 
 	// removes t from runningTasks
-	// 定义了一个函数，用来从runningTasks队列删除某个Task
 	delTask := func(t task) {
 		for i := range runningTasks {
 			if runningTasks[i] == t {
@@ -342,7 +335,7 @@ func (srv *Server) run(dialstate dialer) {
 		}
 	}
 	// starts until max number of active tasks is satisfied
-	// 同时开始连接的节点数量是16个。 遍历 runningTasks队列，并启动这些任务。
+	// The number of nodes that started to connect at the same time is 16. Traverse the runningTasks queue and start these tasks.
 	startTasks := func(ts []task) (rest []task) {
 		i := 0
 		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
@@ -355,10 +348,10 @@ func (srv *Server) run(dialstate dialer) {
 	}
 	scheduleTasks := func() {
 		// Start from queue first.
-		// 首先调用startTasks启动一部分，把剩下的返回给queuedTasks.
+		// First call startTasks to start a part, and return the rest to queuedTasks.
 		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
 		// Query dialer for new tasks and start as many as possible now.
-		// 调用newTasks来生成任务，并尝试用startTasks启动。并把暂时无法启动的放入queuedTasks队列
+		// Call newTasks to generate the task and try to start with startTasks. And put the queue that can't be started temporarily into the queuedTasks queue.
 		if len(runningTasks) < maxActiveDialTasks {
 			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
 			queuedTasks = append(queuedTasks, startTasks(nt)...)
@@ -367,8 +360,8 @@ func (srv *Server) run(dialstate dialer) {
 
 running:
 	for {
-		//调用 dialstate.newTasks来生成新任务。 并调用startTasks启动新任务。
-		//如果 dialTask已经全部启动，那么会生成一个睡眠超时任务。
+		// Call dialstate.newTasks to generate a new task. And call startTasks to start a new task.
+		// If the dialTask has all been started, a sleep timeout task will be generated.
 		scheduleTasks()
 
 		select {
@@ -404,7 +397,6 @@ running:
 		case c := <-srv.posthandshake:
 			// A connection has passed the encryption handshake so
 			// the remote identity is known (but hasn't been verified yet).
-			// 记得之前调用checkpoint方法，会把连接发送给这个channel。
 			if trusted[c.id] {
 				// Ensure that the trusted flag is set before checking against MaxPeers.
 				c.flags |= trustedConn
@@ -418,9 +410,7 @@ running:
 		case c := <-srv.addpeer:
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
-			// 两次握手之后会调用checkpoint把连接发送到addpeer这个channel。
-			// 然后通过newPeer创建了Peer对象。
-			// 启动一个goroutine 启动peer对象。 调用了peer.run方法。
+			// After two handshakes, checkpoint is called to send the connection to the addpeer channel.
 			err := srv.protoHandshakeChecks(peers, c)
 			if err == nil {
 				// The handshakes are done and it passed all checks.
@@ -475,7 +465,7 @@ running:
 }
 ```
 
-runPeer 方法
+runPeer method
 
 ```go
 // runPeer runs in its own goroutine for each peer.
@@ -508,8 +498,8 @@ func (srv *Server) runPeer(p *Peer) {
 }
 ```
 
-总结：
+Sum up:
 
-server 对象主要完成的工作把之前介绍的所有组件组合在一起。 使用 rlpx.go 来处理加密链路。 使用 discover 来处理节点发现和查找。 使用 dial 来生成和连接需要连接的节点。 使用 peer 对象来处理每个连接。
+The main work done by the server object combines all the components described earlier. Use rlpx.go to handle encrypted links. Use discover to handle node discovery and lookups. Use dial to generate and connect the nodes that need to be connected. Use a peer object to handle each connection.
 
-server 启动了一个 listenLoop 来监听和接收新的连接。 启动一个 run 的 goroutine 来调用 dialstate 生成新的 dial 任务并进行连接。 goroutine 之间使用 channel 来进行通讯和配合。
+The server started a listenLoop to listen for and receive new connections. Start a run goroutine to call dialstate to generate a new dial task and connect. Channels are used between goroutines for communication and cooperation.

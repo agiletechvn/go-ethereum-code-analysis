@@ -1,8 +1,8 @@
-p2p 的网络发现协议使用了 Kademlia protocol 来处理网络的节点发现。节点查找和节点更新。Kademlia protocol 使用了 UDP 协议来进行网络通信。
+P2p's network discovery protocol uses the Kademlia protocol to handle node discovery on the network. Node lookups and node updates. The Kademlia protocol uses the UDP protocol for network communication.
 
-阅读这部分的代码建议先看看 references 里面的 Kademlia 协议简介来看看什么是 Kademlia 协议。
+Read the code in this section. First look at the Kademlia protocol introduction in the references to see what the Kademlia protocol is.
 
-首先看看数据结构。 网络传输了 4 种数据包(UDP 协议是基于报文的协议。传输的是一个一个数据包)，分别是 ping,pong,findnode 和 neighbors。 下面分别定义了 4 种报文的格式。
+First look at the data structure. The network transmitted 4 kinds of data packets (UDP protocol is a message-based protocol. One packet is transmitted), which are ping, pong, findnode and neighbors. The format of the four types of messages is defined below.
 
 ```go
 // RPC packet types
@@ -15,33 +15,29 @@ const (
 // RPC request structures
 type (
 	ping struct {
-		Version    uint             //协议版本
-		From, To   rpcEndpoint		//源IP地址 目的IP地址
-		Expiration uint64			//超时时间
+		Version    uint             // protocol version
+		From, To   rpcEndpoint		// Source IP address and Destination IP address
+		Expiration uint64			// timeout
 		// Ignore additional fields (for forward compatibility).
-		//可以忽略的字段。 为了向前兼容
+
 		Rest []rlp.RawValue `rlp:"tail"`
 	}
 
 	// pong is the reply to ping.
-	// ping包的回应
 	pong struct {
 		// This field should mirror the UDP envelope address
 		// of the ping packet, which provides a way to discover the
 		// the external address (after NAT).
-		// 目的IP地址
 		To rpcEndpoint
-		// 说明这个pong包是回应那个ping包的。 包含了ping包的hash值
+		// Explain that this pong package responds to the ping package. Contains the hash value of the ping packet
 		ReplyTok   []byte // This contains the hash of the ping packet.
-		//包超时的绝对时间。 如果收到包的时候超过了这个时间，那么包被认为是超时的。
 		Expiration uint64 // Absolute timestamp at which the packet becomes invalid.
 		// Ignore additional fields (for forward compatibility).
 		Rest []rlp.RawValue `rlp:"tail"`
 	}
-	// findnode 是用来查询距离target比较近的节点
 	// findnode is a query for nodes close to the given target.
 	findnode struct {
-		// 目的节点
+		// Destination node
 		Target     NodeID // doesn't need to be an actual public key
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
@@ -49,9 +45,8 @@ type (
 	}
 
 	// reply to findnode
-	// findnode的回应
 	neighbors struct {
-		//距离target比较近的节点值。
+		// A node value that is closer to the target.
 		Nodes      []rpcNode
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
@@ -73,7 +68,7 @@ type (
 )
 ```
 
-定义了两个接口类型，packet 接口类型应该是给 4 种不同类型的包分派不同的 handle 方法。 conn 接口定义了一个 udp 的连接的功能。
+Two interface types are defined, and the packet interface type should be assigned different handle methods for 4 different types of packages. The conn interface defines the functionality of a udp connection.
 
 ```go
 type packet interface {
@@ -89,27 +84,27 @@ type conn interface {
 }
 ```
 
-udp 的结构， 需要注意的是最后一个字段\*Table 是 go 里面的匿名字段。 也就是说 udp 可以直接调用匿名字段 Table 的方法。
+The structure of udp, it should be noted that the last field \*Table is an anonymous field in go. In other words, udp can directly call the method of the anonymous field Table.
 
 ```go
 // udp implements the RPC protocol.
 type udp struct {
-	conn        conn					//网络连接
+	conn        conn					// connection
 	netrestrict *netutil.Netlist
-	priv        *ecdsa.PrivateKey		//私钥，自己的ID是通过这个来生成的。
+	priv        *ecdsa.PrivateKey		// the private key of the node
 	ourEndpoint rpcEndpoint
 
-	addpending chan *pending			//用来申请一个pending
-	gotreply   chan reply				//用来获取回应的队列
+	addpending chan *pending			// Used to apply for a pending
+	gotreply   chan reply				// The queue used to get the response
 
-	closing chan struct{}				//用来关闭的队列
+	closing chan struct{}
 	nat     nat.Interface
 
 	*Table
 }
 ```
 
-pending 和 reply 结构。 这两个结构用户内部的 go routine 之间进行通信的结构体。
+Pending and reply structures. The structure that communicates between the go routines inside the two structure users.
 
 ```go
 // pending represents a pending reply.
@@ -119,8 +114,6 @@ pending 和 reply 结构。 这两个结构用户内部的 go routine 之间进�
 // our implementation handles this by storing a callback function for
 // each pending reply. incoming packets from a node are dispatched
 // to all the callback functions for that node.
-// pending结构 代表正在等待一个reply
-// 我们通过为每一个pending reply 存储一个callback来实现这个功能。从一个节点来的所有数据包都会分配到这个节点对应的callback上面。
 type pending struct {
 	// these fields must match in the reply.
 	from  NodeID
@@ -133,7 +126,6 @@ type pending struct {
 	// true, the callback is removed from the pending reply queue.
 	// if it returns false, the reply is considered incomplete and
 	// the callback will be invoked again for the next matching reply.
-	//如果返回值是true。那么callback会从队列里面移除。 如果返回false,那么认为reply还没有完成，会继续等待下一次reply.
 	callback func(resp interface{}) (done bool)
 
 	// errc receives nil when the callback indicates completion or an
@@ -147,12 +139,11 @@ type reply struct {
 	data  interface{}
 	// loop indicates whether there was
 	// a matching request by sending on this channel.
-	//通过往这个channel上面发送消息来表示匹配到一个请求。
 	matched chan<- bool
 }
 ```
 
-UDP 的创建
+UDP creation
 
 ```go
 // ListenUDP returns a new table that listens for UDP packets on laddr.
@@ -183,8 +174,8 @@ func newUDP(priv *ecdsa.PrivateKey, c conn, natm nat.Interface, nodeDBPath strin
 		addpending:  make(chan *pending),
 	}
 	realaddr := c.LocalAddr().(*net.UDPAddr)
-	if natm != nil {   //natm nat mapping 用来获取外网地址
-		if !realaddr.IP.IsLoopback() {  //如果地址是本地环回地址
+	if natm != nil {   // natm nat mapping Used to obtain the external network address
+		if !realaddr.IP.IsLoopback() {  // If the address is a local loopback address
 			go nat.Map(natm, udp.closing, "udp", realaddr.Port, realaddr.Port, "ethereum discovery")
 		}
 		// TODO: react to external IP changes over time.
@@ -194,22 +185,22 @@ func newUDP(priv *ecdsa.PrivateKey, c conn, natm nat.Interface, nodeDBPath strin
 	}
 	// TODO: separate TCP port
 	udp.ourEndpoint = makeEndpoint(realaddr, uint16(realaddr.Port))
-	//创建一个table 后续会介绍。 Kademlia的主要逻辑在这个类里面实现。
+	// Creating a table will be introduced later. The main logic of Kademlia is implemented in this class.
 	tab, err := newTable(udp, PubkeyID(&priv.PublicKey), realaddr, nodeDBPath)
 	if err != nil {
 		return nil, nil, err
 	}
-	udp.Table = tab   //匿名字段的赋值
+	udp.Table = tab   // Assignment of anonymous fields
 
 	go udp.loop()		//go routine
-	go udp.readLoop()	//用来网络数据读取。
+	go udp.readLoop()	// Used for network data reading.
 	return udp.Table, udp, nil
 }
 ```
 
-ping 方法与 pending 的处理，之前谈到了 pending 是等待一个 reply。 这里通过代码来分析是如何实现等待 reply 的。
+The ping method is handled with pending, before talking about pending is waiting for a reply. Here is a code to analyze how it is implemented waiting for reply.
 
-pending 方法把 pending 结构体发送给 addpending. 然后等待消息的处理和接收。
+The pending method sends the pending structure to addpending. It then waits for the message to be processed and received.
 
 ```go
 // ping sends a ping message to the given node and waits for a reply.
@@ -239,7 +230,7 @@ func (t *udp) pending(id NodeID, ptype byte, callback func(interface{}) bool) <-
 }
 ```
 
-addpending 消息的处理。 之前创建 udp 的时候调用了 newUDP 方法。里面启动了两个 goroutine。 其中的 loop()就是用来处理 pending 消息的。
+Processing of the addpending message. The newUDP method was called when the udp was created. There are two goroutines launched inside. The loop() is used to process the pending message.
 
 ```go
 // loop runs in its own goroutine. it keeps track of
@@ -256,8 +247,8 @@ func (t *udp) loop() {
 	defer timeout.Stop()
 
 	resetTimeout := func() {
-		//这个方法的主要功能是查看队列里面是否有需要超时的pending消息。 如果有。那么
-		//根据最先超时的时间设置超时醒来。
+		// The main function of this method is to check whether there is a pending message in the queue that needs to time out. If there is. Then
+		// Wake up according to the timeout of the first timeout.
 		if plist.Front() == nil || nextTimeout == plist.Front().Value {
 			return
 		}
@@ -272,8 +263,6 @@ func (t *udp) loop() {
 			// Remove pending replies whose deadline is too far in the
 			// future. These can occur if the system clock jumped
 			// backwards after the deadline was assigned.
-			//如果有消息的deadline在很远的未来，那么直接设置超时，然后移除。
-			//这种情况在修改系统时间的时候有可能发生，如果不处理可能导致堵塞太长时间。
 			nextTimeout.errc <- errClockWarp
 			plist.Remove(el)
 		}
@@ -282,30 +271,30 @@ func (t *udp) loop() {
 	}
 
 	for {
-		resetTimeout()  //首先处理超时。
+		resetTimeout()  // First handle the timeout.
 
 		select {
-		case <-t.closing:  //收到关闭信息。 超时所有的堵塞的队列
+		case <-t.closing:  // Received a close message. Timeout all blocked queues
 			for el := plist.Front(); el != nil; el = el.Next() {
 				el.Value.(*pending).errc <- errClosed
 			}
 			return
 
-		case p := <-t.addpending:  //增加一个pending 设置deadline
+		case p := <-t.addpending:  // Add a pending setting to the deadline
 			p.deadline = time.Now().Add(respTimeout)
 			plist.PushBack(p)
 
-		case r := <-t.gotreply:  //收到一个reply 寻找匹配的pending
+		case r := <-t.gotreply:  // Received a reply to find a matching pending
 			var matched bool
 			for el := plist.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
-				if p.from == r.from && p.ptype == r.ptype { //如果来自同一个人。 而且类型相同
+				if p.from == r.from && p.ptype == r.ptype { // If from the same person. And the same type
 					matched = true
 					// Remove the matcher if its callback indicates
 					// that all replies have been received. This is
 					// required for packet types that expect multiple
 					// reply packets.
-					if p.callback(r.data) { //如果callback返回值是true 。说明pending已经完成。 给p.errc写入nil。 pending完成。
+					if p.callback(r.data) { // If the callback return value is true. Description pending has been completed. Write nil to p.errc. Pending completed.
 						p.errc <- nil
 						plist.Remove(el)
 					}
@@ -313,15 +302,15 @@ func (t *udp) loop() {
 					contTimeouts = 0
 				}
 			}
-			r.matched <- matched //写入reply的matched
+			r.matched <- matched // Write reply to match
 
-		case now := <-timeout.C:   //处理超时信息
+		case now := <-timeout.C:   // Processing timeout information
 			nextTimeout = nil
 
 			// Notify and remove callbacks whose deadline is in the past.
 			for el := plist.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
-				if now.After(p.deadline) || now.Equal(p.deadline) { //如果超时写入超时信息并移除
+				if now.After(p.deadline) || now.Equal(p.deadline) { // If the timeout is written to the timeout information and removed
 					p.errc <- errTimeout
 					plist.Remove(el)
 					contTimeouts++
@@ -329,7 +318,6 @@ func (t *udp) loop() {
 			}
 			// If we've accumulated too many timeouts, do an NTP time sync check
 			if contTimeouts > ntpFailureThreshold {
-				//如果连续超时很多次。 那么查看是否是时间不同步。 和NTP服务器进行同步。
 				if time.Since(ntpWarnTime) >= ntpWarningCooldown {
 					ntpWarnTime = time.Now()
 					go checkClockDrift()
@@ -341,7 +329,7 @@ func (t *udp) loop() {
 }
 ```
 
-上面看到了 pending 的处理。 不过 loop()方法种还有一个 gotreply 的处理。 这个实在 readLoop()这个 goroutine 中产生的。
+I saw the processing of pending above. However, the loop() method also has a handleply handler. This is actually generated in the goroutine of readLoop().
 
 ```go
 // readLoop runs in its own goroutine. it handles incoming UDP packets.
@@ -405,9 +393,9 @@ func (t *udp) handleReply(from NodeID, ptype byte, req packet) bool {
 }
 ```
 
-上面介绍了 udp 的大致处理的流程。 下面介绍下 udp 的主要处理的业务。 udp 主要发送两种请求，对应的也会接收别人发送的这两种请求， 对应这两种请求又会产生两种回应。
+The general process of udp is described above. The following describes the main processing business of udp. Udp mainly sends two kinds of requests, and the corresponding ones also receive the two kinds of requests sent by others, and two kinds of responses are generated corresponding to the two kinds of requests.
 
-ping 请求，可以看到 ping 请求希望得到一个 pong 回答。 然后返回。
+Ping the request, you can see that the ping request wants a pong answer. Then return.
 
 ```go
 // ping sends a ping message to the given node and waits for a reply.
@@ -424,7 +412,7 @@ func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 }
 ```
 
-pong 回答,如果 pong 回答没有匹配到一个对应的 ping 请求。那么返回 errUnsolicitedReply 异常。
+Pong replied that if the pong answer does not match a corresponding ping request. Then return the errUnsolicitedReply exception.
 
 ```go
 func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
@@ -438,7 +426,7 @@ func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 }
 ```
 
-findnode 请求, 发送 findnode 请求，然后等待 node 回应 k 个邻居。
+Findnode request, send findnode request, and then wait for node to respond to k neighbors.
 
 ```go
 // findnode sends a findnode request to the given node and waits until
@@ -468,7 +456,7 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID) ([]*Node
 }
 ```
 
-neighbors 回应, 很简单。 把回应发送给 gotreply 队列。 如果没有找到匹配的 findnode 请求。返回 errUnsolicitedReply 错误
+Neighbors respond, very simple. Send the response to the gotreply queue. If no matching findnode request is found. Return errUnsolicitedReply error
 
 ```go
 func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
@@ -482,7 +470,7 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byt
 }
 ```
 
-收到别的节点发送的 ping 请求，发送 pong 回答。 如果没有匹配上一个 pending(说明不是自己方请求的结果)。 就调用 bond 方法把这个节点加入自己的 bucket 缓存。(这部分原理在 table.go 里面会详细介绍)
+Receive a ping request from another node and send a pong answer. If the previous pending is not matched (indicating that it is not the result of the request). The bond method is called to add this node to its own bucket cache. (This part of the principle will be described in detail in table.go)
 
 ```go
 func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
@@ -502,7 +490,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 }
 ```
 
-收到别人发送的 findnode 请求。这个请求希望把和 target 距离相近的 k 个节点发送回去。 算法的详细请参考 references 目录下面的 pdf 文档。
+Received a findnode request from someone else. This request wants to send back k nodes that are close to the target distance. For details on the algorithm, please refer to the pdf documentation in the references directory.
 
 ```go
 func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
@@ -521,7 +509,7 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 	}
 	target := crypto.Keccak256Hash(req.Target[:])
 	t.mutex.Lock()
-	//获取bucketSize个和target距离相近的节点。 这个方法在table.go内部实现。后续会详细介绍
+	// Get the bucketSize nodes that are close to the target. This method is implemented inside table.go. Follow-up details
 	closest := t.closest(target, bucketSize).entries
 	t.mutex.Unlock()
 
@@ -542,9 +530,9 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 }
 ```
 
-### udp 信息加密和安全问题
+### Udp information encryption and security issues
 
-discover 协议因为没有承载什么敏感数据，所以数据是以明文传输，但是为了确保数据的完整性和不被篡改，所以在数据包的包头加上了数字签名。
+The discover protocol does not carry any sensitive data, so the data is transmitted in clear text, but in order to ensure the integrity of the data and not to be tampered with, the digital signature of the packet header is added.
 
 ```go
 func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) ([]byte, error) {

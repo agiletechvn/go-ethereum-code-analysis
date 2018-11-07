@@ -1,53 +1,54 @@
-RLPx Encryption(RLPx 加密)
+RLPx Encryption (RLPx encryption)
 
-之前介绍的 discover 节点发现协议， 因为承载的数据不是很重要，基本是明文传输的。
+The discovery node discovery protocol introduced earlier, because the data carried is not very important, basically the plaintext transmission.
 
-每一个节点会开启两个同样的端口，一个是 UDP 端口，用来节点发现，一个是 TCP 端口，用来承载业务数据。 UDP 的端口和 TCP 的端口的端口号是同样的。 这样只要通过 UDP 发现了端口，就等于可以用 TCP 来连接到对应的端口。
+Each node will open two identical ports, one for UDP port and one for TCP discovery, which is used to carry service data. The port number of the UDP port is the same as the port number of the TCP port. In this way, as long as the port is discovered through UDP, it is equivalent to using TCP to connect to the corresponding port.
 
-RLPx 协议就定义了 TCP 链接的加密过程。
+The RLPx protocol defines the encryption process for TCP links.
 
-RLPx 使用了(Perfect Forward Secrecy), 简单来说。 链接的两方生成生成随机的私钥，通过随机的私钥得到公钥。 然后双方交换各自的公钥， 这样双方都可以通过自己随机的私钥和对方的公钥来生成一个同样的共享密钥(shared-secret)。后续的通讯使用这个共享密钥作为对称加密算法的密钥。 这样来说。如果有一天一方的私钥被泄露，也只会影响泄露之后的消息的安全性， 对于之前的通讯是安全的(因为通讯的密钥是随机生成的，用完后就消失了)。
+RLPx uses (Perfect Forward Secrecy), in simple terms. The two sides of the link generate a random private key, and the public key is obtained by a random private key. The two parties then exchange their respective public keys so that both parties can generate a shared key (shared-secret) by their own random private key and the other party's public key. Subsequent communications use this shared key as the key to the symmetric encryption algorithm. In this way. If one day's private key is leaked, it will only affect the security of the message after the leak. It is safe for the previous communication (because the communication key is randomly generated and disappears after use).
 
-## 前向安全性(引用自维基百科)
+## Forward security (cited from Wikipedia)
 
-前向安全或前向保密（英语：Forward Secrecy，缩写：FS），有时也被称为完美前向安全[1]（英语：Perfect Forward Secrecy，缩写：PFS），是密码学中通讯协议的安全属性，指的是长期使用的主密钥泄漏不会导致过去的会话密钥泄漏。[2]前向安全能够保护过去进行的通讯不受密码或密钥在未来暴露的威胁。[3]如果系统具有前向安全性，就可以保证万一密码或密钥在某个时刻不慎泄露，过去已经进行的通讯依然是安全，不会受到任何影响，即使系统遭到主动攻击也是如此。
+Forward security or forward secrecy (English: Forward Secrecy, abbreviation: FS), sometimes referred to as Perfect Forward Secrecy (PFS), is the security of communication protocols in cryptography. Attributes refer to long-term use of master key leaks that do not cause past session key leaks. Forward security protects communications that were conducted in the past without the threat of passwords or keys being exposed in the future. If the system has forward security, it can guarantee that if the password or key is accidentally leaked at a certain moment, the communication that has been carried out in the past is still safe and will not be affected, even if the system is actively attacked. in this way.
 
-### 迪菲-赫尔曼密钥交换
+### Diffie-Hellman key exchange
 
-迪菲-赫尔曼密钥交换（英语：Diffie–Hellman key exchange，缩写为 D-H） 是一种安全协议。它可以让双方在完全没有对方任何预先信息的条件下通过不安全信道创建起一个密钥。这个密钥可以在后续的通讯中作为对称密钥来加密通讯内容。公钥交换的概念最早由瑞夫·墨克（Ralph C. Merkle）提出，而这个密钥交换方法，由惠特菲尔德·迪菲（Bailey Whitfield Diffie）和马丁·赫尔曼（Martin Edward Hellman）在 1976 年首次发表。马丁·赫尔曼曾主张这个密钥交换方法，应被称为迪菲-赫尔曼-墨克密钥交换（英语：Diffie–Hellman–Merkle key exchange）。
+Diffie-Hellman key exchange (DH) is a security protocol. It allows the parties to create a key over an insecure channel without any prior information from the other party. This key can be used as a symmetric key to encrypt the communication content in subsequent communications. The concept of public key exchange was first proposed by Ralph C. Merkle, and this key exchange method was developed by Bailey Whitfield Diffie and Martin Edward Hellman. First published in 1976. Martin Herman once argued that this key exchange method should be called Diffie–Hellman–Merkle key exchange.
 
-- 迪菲－赫尔曼密钥交换的同义词包括:
-- 迪菲－赫尔曼密钥协商
-- 迪菲－赫尔曼密钥创建
-- 指数密钥交换
-- 迪菲－赫尔曼协议
+Synonyms for Diffie-Hellman key exchange include:
 
-虽然迪菲－赫尔曼密钥交换本身是一个匿名（无认证）的密钥交换协议，它却是很多认证协议的基础，并且被用来提供传输层安全协议的短暂模式中的完备的前向安全性。
+- Diffie-Hellman key agreement
+- Diffie-Hellman key creation
+- Index key exchange
+- Diffie-Herman Agreement
 
-#### 描述
+Although the Diffie-Hellman key exchange itself is an anonymous (non-authenticated) key exchange protocol, it is the basis of many authentication protocols and is used to provide a complete pre-transmission mode in the transport layer security protocol. To safety.
 
-迪菲－赫尔曼通过公共信道交换一个信息，就可以创建一个可以用于在公共信道上安全通信的共享秘密（shared secret）。
-以下解释它的过程（包括算法的数学部分）：
+#### description
+
+Diffie-Herman exchanges a message over the common channel to create a shared secret that can be used for secure communication over the common channel. The following explains its process (including the mathematical part of the algorithm):
+
 ![image](picture/rlpx_1.png)
 
-最简单，最早提出的这个协议使用一个质数 p 的整数模 n 乘法群以及其原根 g。下面展示这个算法，绿色表示非秘密信息, 红色粗体表示秘密信息：
-![image](picture/rlpx_2.png)
-![image](picture/rlpx_3.png)
+The simplest, the earliest proposed protocol uses an integer modulo n multiplicative group of prime numbers p and its original root g. The algorithm is shown below, green for non-secret information, red for bold for secret information:
 
-## p2p/rlpx.go 源码解读
+![image](picture/rlpx_2_3.png)
 
-这个文件实现了 RLPx 的链路协议。
+## P2p/rlpx.go source code interpretation
 
-链接联系的大致流程如下：
+This file implements the link protocol for RLPx.
 
-1. doEncHandshake() 通过这个方法来完成交换密钥，创建加密信道的流程。如果失败，那么链接关闭。
-2. doProtoHandshake() 这个方法来进行协议特性之间的协商，比如双方的协议版本，是否支持 Snappy 加密方式等操作。
+The general process of link contact is as follows:
 
-链接经过这两次处理之后，就算建立起来了。因为 TCP 是流式的协议。所有 RLPx 协议定义了分帧的方式。所有的数据都可以理解为一个接一个的 rlpxFrame。 rlpx 的读写都是通过 rlpxFrameRW 对象来进行处理。
+1. doEncHandshake() This method is used to complete the process of exchanging keys and creating encrypted channels. If it fails, the link is closed.
+2. doProtoHandshake() This method is used to negotiate between protocol features, such as the protocol version of both parties, whether to support the Snappy encryption method.
+
+After the link has been processed twice, it is built up. Because TCP is a streaming protocol. All RLPx protocols define the way framing is done. All data can be understood as one after another rlpxFrame. Rlpx reads and writes are handled by the rlpxFrameRW object.
 
 ### doEncHandshake
 
-链接的发起者被称为 initiator。链接的被动接受者被成为 receiver。 这两种模式下处理的流程是不同的。完成握手后。 生成了一个 sec.可以理解为拿到了对称加密的密钥。 然后创建了一个 newRLPXFrameRW 帧读写器。完成加密信道的创建过程。
+The originator of the link is called the initiator. The passive recipient of the link is called a receiver. The process of processing in these two modes is different. After completing the handshake. Generated a sec. It can be understood as a key that gets symmetric encryption. Then a newRLPXFrameRW frame reader was created. Complete the process of creating an encrypted channel.
 
 ```go
 func (t *rlpx) doEncHandshake(prv *ecdsa.PrivateKey, dial *discover.Node) (discover.NodeID, error) {
@@ -70,7 +71,7 @@ func (t *rlpx) doEncHandshake(prv *ecdsa.PrivateKey, dial *discover.Node) (disco
 }
 ```
 
-initiatorEncHandshake 首先看看链接的发起者的操作。首先通过 makeAuthMsg 创建了 authMsg。 然后通过网络发送给对端。然后通过 readHandshakeMsg 读取对端的回应。 最后调用 secrets 创建了共享秘密。
+The initiatorEncHandshake first looks at the operation of the originator of the link. First created authMsg with makeAuthMsg. Then send it to the peer through the network. Then read the response from the peer through readHandshakeMsg. Finally, the secrets are created by calling secrets.
 
 ```go
 // initiatorEncHandshake negotiates a session token on conn.
@@ -103,7 +104,7 @@ func initiatorEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, remoteID d
 }
 ```
 
-makeAuthMsg。这个方法创建了 initiator 的 handshake message。 首先对端的公钥可以通过对端的 ID 来获取。所以对端的公钥对于发起连接的人来说是知道的。 但是对于被连接的人来说，对端的公钥应该是不知道的。
+makeAuthMsg. This method creates the handshake message of the initiator. First, the public key of the peer can be obtained through the ID of the peer. So the public key of the peer is known to the person who initiated the connection. But for the connected person, the public key of the peer should be unknown.
 
 ```go
 // makeAuthMsg creates the initiator handshake message.
@@ -114,27 +115,26 @@ func (h *encHandshake) makeAuthMsg(prv *ecdsa.PrivateKey, token []byte) (*authMs
 	}
 	h.remotePub = ecies.ImportECDSAPublic(rpub)
 	// Generate random initiator nonce.
-	// 生成一个随机的初始值， 是为了避免重放攻击么？ 还是为了避免通过多次连接猜测密钥？
+	// Is a random initial value generated to avoid replay attacks? Or to avoid guessing keys through multiple connections?
 	h.initNonce = make([]byte, shaLen)
 	if _, err := rand.Read(h.initNonce); err != nil {
 		return nil, err
 	}
 	// Generate random keypair to for ECDH.
-	//生成一个随机的私钥
 	h.randomPrivKey, err = ecies.GenerateKey(rand.Reader, crypto.S256(), nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Sign known message: static-shared-secret ^ nonce
-	// 这个地方应该是直接使用了静态的共享秘密。 使用自己的私钥和对方的公钥生成的一个共享秘密。
+	// This place should be a direct use of static shared secrets. A shared secret generated using your own private key and the other's public key.
 	token, err = h.staticSharedSecret(prv)
 	if err != nil {
 		return nil, err
 	}
-	//这里我理解用共享秘密来加密这个initNonce。
+	//Here I understand the use of shared secrets to encrypt this initNonce.
 	signed := xor(token, h.initNonce)
-	// 使用随机的私钥来加密这个信息。
+	// Use a random private key to encrypt this information.
 	signature, err := crypto.Sign(signed, h.randomPrivKey.ExportECDSA())
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (h *encHandshake) makeAuthMsg(prv *ecdsa.PrivateKey, token []byte) (*authMs
 
 	msg := new(authMsgV4)
 	copy(msg.Signature[:], signature)
-	//这里把发起者的公钥告知对方。 这样对方使用自己的私钥和这个公钥可以生成静态的共享秘密。
+	// Here the initiator's public key is communicated to the other party. In this way, the other party can generate a static shared secret using its own private key and this public key.
 	copy(msg.InitiatorPubkey[:], crypto.FromECDSAPub(&prv.PublicKey)[1:])
 	copy(msg.Nonce[:], h.initNonce)
 	msg.Version = 4
@@ -156,7 +156,7 @@ func (h *encHandshake) staticSharedSecret(prv *ecdsa.PrivateKey) ([]byte, error)
 }
 ```
 
-sealEIP8 方法，这个方法是一个组包方法，对 msg 进行 rlp 的编码。 填充一些数据。 然后使用对方的公钥把数据进行加密。 这意味着只有对方的私钥才能解密这段信息。
+The sealEIP8 method, which is a grouping method that encodes rml for msg. Fill in some data. The data is then encrypted using the other party's public key. This means that only the other party's private key can decrypt this information.
 
 ```go
 func sealEIP8(msg interface{}, h *encHandshake) ([]byte, error) {
@@ -176,7 +176,7 @@ func sealEIP8(msg interface{}, h *encHandshake) ([]byte, error) {
 }
 ```
 
-readHandshakeMsg 这个方法会从两个地方调用。 一个是在 initiatorEncHandshake。一个就是在 receiverEncHandshake。 这个方法比较简单。 首先用一种格式尝试解码。如果不行就换另外一种。应该是一种兼容性的设置。 基本上就是使用自己的私钥进行解码然后调用 rlp 解码成结构体。 结构体的描述就是下面的 authRespV4,里面最重要的就是对端的随机公钥。 双方通过自己的私钥和对端的随机公钥可以得到一样的共享秘密。 而这个共享秘密是第三方拿不到的。
+readHandshakeMsg This method will be called from two places. One is in the initiatorEncHandshake. One is in receiverEncHandshake. This method is relatively simple. First try decoding in one format. If not, change the other one. It should be a compatibility setting. Basically, it uses its own private key for decoding and then calls rlp to decode it into a structure. The description of the structure is the following authRespV4, the most important of which is the random public key of the opposite end. Both parties can get the same shared secret through their private key and the random public key of the peer. And this shared secret is not available to third parties.
 
 ```go
 // RLPx v4 handshake response (defined in EIP-8).
@@ -222,7 +222,7 @@ func readHandshakeMsg(msg plainDecoder, plainSize int, prv *ecdsa.PrivateKey, r 
 }
 ```
 
-handleAuthResp 这个方法非常简单。
+handleAuthResp This method is very simple.
 
 ```go
 func (h *encHandshake) handleAuthResp(msg *authRespV4) (err error) {
@@ -232,7 +232,7 @@ func (h *encHandshake) handleAuthResp(msg *authRespV4) (err error) {
 }
 ```
 
-最后是 secrets 函数，这个函数是在 handshake 完成之后调用。它通过自己的随机私钥和对端的公钥来生成一个共享秘密,这个共享秘密是瞬时的(只在当前这个链接中存在)。所以当有一天私钥被破解。 之前的消息还是安全的。
+Finally, the secrets function, which is called after the completion of the handshake. It generates a shared secret through its own random private key and the peer's public key. This shared secret is instantaneous (only exists in the current link). So when one day the private key is cracked. The previous news is still safe.
 
 ```go
 // secrets is called after the handshake is completed.
@@ -246,7 +246,7 @@ func (h *encHandshake) secrets(auth, authResp []byte) (secrets, error) {
 	// derive base secrets from ephemeral key agreement
 	sharedSecret := crypto.Keccak256(ecdheSecret, crypto.Keccak256(h.respNonce, h.initNonce))
 	aesSecret := crypto.Keccak256(ecdheSecret, sharedSecret)
-	// 实际上这个MAC保护了ecdheSecret这个共享秘密。respNonce和initNonce这三个值
+	// In fact, this MAC protects the shared secret of ecdheSecret. Three values of respNonce and initNonce
 	s := secrets{
 		RemoteID: h.remoteID,
 		AES:      aesSecret,
@@ -260,7 +260,7 @@ func (h *encHandshake) secrets(auth, authResp []byte) (secrets, error) {
 	mac2 := sha3.NewKeccak256()
 	mac2.Write(xor(s.MAC, h.initNonce))
 	mac2.Write(authResp)
-	//收到的每个包都会检查其MAC值是否满足计算的结果。如果不满足说明有问题。
+	// Each packet received will check if its MAC value meets the calculated result. If the instructions are not met, there is a problem.
 	if h.initiator {
 		s.EgressMAC, s.IngressMAC = mac1, mac2
 	} else {
@@ -271,7 +271,7 @@ func (h *encHandshake) secrets(auth, authResp []byte) (secrets, error) {
 }
 ```
 
-receiverEncHandshake 函数和 initiatorEncHandshake 的内容大致相同。 但是顺序有些不一样。
+The receiverEncHandshake function is roughly the same as the initiatorEncHandshake. But the order is a bit different.
 
 ```go
 // receiverEncHandshake negotiates a session token on conn.
@@ -312,7 +312,7 @@ func receiverEncHandshake(conn io.ReadWriter, prv *ecdsa.PrivateKey, token []byt
 
 ### doProtocolHandshake
 
-这个方法比较简单， 加密信道已经创建完毕。 我们看到这里只是约定了是否使用 Snappy 加密然后就退出了。
+This method is relatively simple, and the encrypted channel has been created. We saw that it was only agreed to use Snappy encryption and then quit.
 
 ```go
 // doEncHandshake runs the protocol handshake using authenticated
@@ -340,9 +340,9 @@ func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err
 }
 ```
 
-### rlpxFrameRW 数据分帧
+### rlpxFrameRW data framing
 
-数据分帧主要通过 rlpxFrameRW 类来完成的。
+Data framing is done primarily through the rlpxFrameRW class.
 
 ```go
 // rlpxFrameRW implements a simplified version of RLPx framing.
@@ -363,11 +363,11 @@ type rlpxFrameRW struct {
 }
 ```
 
-我们在完成两次握手之后。调用 newRLPXFrameRW 方法创建了这个对象。
+We are after completing two handshakes. This object was created by calling the newRLPXFrameRW method.
 
     `t.rw = newRLPXFrameRW(t.fd, sec)`
 
-然后提供 ReadMsg 和 WriteMsg 方法。这两个方法直接调用了 rlpxFrameRW 的 ReadMsg 和 WriteMsg
+Then provide the ReadMsg and WriteMsg methods. These two methods directly call ReadMsg and WriteMsg of rlpxFrameRW
 
 ```go
 func (t *rlpx) ReadMsg() (Msg, error) {
@@ -514,7 +514,7 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 }
 ```
 
-帧结构
+Frame structure
 
       normal = not chunked
       chunked-0 = First frame of a multi-frame packet
@@ -555,4 +555,4 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
     egress-mac: h256, continuously updated with egress-bytes*
     ingress-mac: h256, continuously updated with ingress-bytes*
 
-因为加密解密算法我也不是很熟，所以这里的分析还不是很彻底。 暂时只是分析了大致的流程。还有很多细节没有确认。
+I am not very familiar with the encryption and decryption algorithm, so the analysis here is not very thorough. For the time being, I just analyzed the rough process. There are still many details that have not been confirmed.
