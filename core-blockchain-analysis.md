@@ -30,9 +30,9 @@ Database structure:
 
 
 
-<details><summary>mermaid</summary>
+<details><summary>mermaid</summary>  
 
-```mermaid
+ 
 graph LR
 	id1["#quot;h#quot; + num + #quot;n#quot;"] --> id2[hash The height of the blockchain used to store the specification and the hash value of the block header]
 	
@@ -49,7 +49,7 @@ graph LR
 	id16 --> id17[block receipt]
   id18["#quot;l#quot; + hash"] --> id19[transaction/receipt lookup metadata]
 	
-```
+
 </details>
 
 | key                    | value              | description                                                                                                                     | insert                                                                                  | delete                                                                                                                                                                                                                                                                      |
