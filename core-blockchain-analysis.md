@@ -32,7 +32,7 @@ Database structure:
 
 <details><summary>mermaid</summary>  
 
- 
+```yaml 
 graph LR
 	id1["#quot;h#quot; + num + #quot;n#quot;"] --> id2[hash The height of the blockchain used to store the specification and the hash value of the block header]
 	
@@ -48,7 +48,7 @@ graph LR
   id15["#quot;r#quot; + num + hash"] --> id16[block receipts height + hash value] 
 	id16 --> id17[block receipt]
   id18["#quot;l#quot; + hash"] --> id19[transaction/receipt lookup metadata]
-	
+```	
 
 </details>
 
