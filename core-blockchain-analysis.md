@@ -26,6 +26,12 @@ Database structure:
 	"LastBlock"   The latest block header used in BlockChain
 	"LastFast"    The latest fast sync block header
 
+![mermaid](https://mermaidjs.github.io/mermaid-live-editor/#/view/eyJjb2RlIjoiZ3JhcGggTFJcblx0aWQxW1wiI3F1b3Q7aCNxdW90OyArIG51bSArICNxdW90O24jcXVvdDtcIl0gLS0-IGlkMltoYXNoIFRoZSBoZWlnaHQgb2YgdGhlIGJsb2NrY2hhaW4gdXNlZCB0byBzdG9yZSB0aGUgc3BlY2lmaWNhdGlvbiBhbmQgdGhlIGhhc2ggdmFsdWUgb2YgdGhlIGJsb2NrIGhlYWRlcl1cblx0XG5cdGlkM1tcIiNxdW90O2gjcXVvdDsgKyBudW0gKyBoYXNoXCJdIC0tPiBpZDRbXCJoZWFkZXJbaGVpZ2h0ICsgaGFzaCB2YWx1ZV1cIl1cblx0aWQ0IC0tPiBpZDVbYmxvY2sgaGVhZGVyXVxuXHRpZDZbXCIjcXVvdDtoI3F1b3Q7ICsgbnVtICsgaGFzaCArICNxdW90O3QjcXVvdDtcIl0gLS0-IGlkN1t0ZCAgaGVpZ2h0ICsgaGFzaCB2YWx1ZV0gXG5cdGlkNyAtLT4gaWQ4W3RvdGFsIGRpZmZpY3VsdHldXG5cdFxuXHRpZDlbXCIjcXVvdDtII3F1b3Q7ICsgaGFzaFwiXSAtLT4gaWQxMFtudW0gYmxvY2sgaGFzaF0gXG5cdGlkMTAgLS0-IGlkMTFbaGVpZ2h0XVxuXHRpZDEyW1wiI3F1b3Q7YiNxdW90OyArIG51bSArIGhhc2hcIl0gLS0-IGlkMTNbYmxvY2sgYm9keSBoZWlnaHQgKyBoYXNoIHZhbHVlXSBcblx0aWQxMyAtLT4gaWQxNFtibG9jayBib2R5XVxuwqDCoGlkMTVbXCIjcXVvdDtyI3F1b3Q7ICsgbnVtICsgaGFzaFwiXSAtLT4gaWQxNltibG9jayByZWNlaXB0cyBoZWlnaHQgKyBoYXNoIHZhbHVlXSBcblx0aWQxNiAtLT4gaWQxN1tibG9jayByZWNlaXB0XVxuwqDCoGlkMThbXCIjcXVvdDtsI3F1b3Q7ICsgaGFzaFwiXSAtLT4gaWQxOVt0cmFuc2FjdGlvbi9yZWNlaXB0IGxvb2t1cCBtZXRhZGF0YV0iLCJtZXJtYWlkIjp7InRoZW1lIjoiZGVmYXVsdCJ9fQ)
+
+
+
+<details><summary>mermaid</summary>
+
 ```mermaid
 graph LR
 	id1["#quot;h#quot; + num + #quot;n#quot;"] --> id2[hash The height of the blockchain used to store the specification and the hash value of the block header]
@@ -44,6 +50,7 @@ graph LR
   id18["#quot;l#quot; + hash"] --> id19[transaction/receipt lookup metadata]
 	
 ```
+</details>
 
 | key                    | value              | description                                                                                                                     | insert                                                                                  | delete                                                                                                                                                                                                                                                                      |
 | ---------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
