@@ -14,7 +14,7 @@ From the test case of txpool, the main functions of txpool are as follows.
 5. If the balance of the account is less than the amount of some transactions, the corresponding transaction will be deleted, and the valid transaction will be moved from pending to queue. Prevent being broadcast.
 6. txPool supports some restrictions on PriceLimit (remove the lowest GasPrice limit), PriceBump (the percentage of the price of the transaction that replaces the same Nonce) AccountSlots (the minimum value of the pending slot for each account) GlobalSlots (the maximum value of the global pending queue) AccountQueue ( The minimum value of the queue for each account) GlobalQueue (maximum value of global queueing) Lifetime (the longest waiting time in the queue)
 7. Replace with the priority of GasPrice in the case of limited resources.
-8. Local transactions will be stored on disk using the journal's functionality and will be re-imported after reboot. Remote trading will not.
+8. Local transactions will be stored on disk using the journal's functionality and will be re-imported after reboot. Remote transaction will not.
 
 data structure
 

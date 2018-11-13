@@ -50,7 +50,7 @@ The main function of Merkle Tree is that when I get Top Hash, this hash value re
 ## Ethereum MPT  
 Each block of Ethereum contains three MPT trees, respectively
 
-- Trading tree
+- Transaction tree
 - Receipt tree (some data during the execution of the transaction)
 - Status tree (account information, contract account and user account)
 

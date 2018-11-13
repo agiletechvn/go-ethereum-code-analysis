@@ -159,7 +159,7 @@ Process implements ChainIndexerBackend, adding a new block header to index
 // Process implements core.ChainIndexerBackend, adding a new header's bloom into
 // the index.
 func (b *BloomIndexer) Process(header *types.Header) {
-	b.gen.AddBloom(uint(header.Number.Uint64()-b.section\*b.size), header.Bloom)
+	b.gen.AddBloom(uint(header.Number.Uint64()-b.section*b.size), header.Bloom)
 	b.head = header.Hash()
 }
 ```
@@ -313,17 +313,15 @@ Polling: GetFilterChanges
 ```go
 // GetFilterChanges returns the logs for the filter with the given id since
 // last time it was called. This can be used for polling.
-// GetFilterChanges 用来返回从上次调用到现在的所有的指定 id 的所有过滤信息。这个可以用来轮询。
 // For pending transaction and block filters the result is []common.Hash.
 // (pending)Log filters return []Log.
-// 对于 pending transaction 和 block 的过滤器，返回结果类型是[]common.Hash. 对于 pending Log 过滤器，返回的是 []Log
 // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getfilterchanges
 func(api\ * PublicFilterAPI) GetFilterChanges(id rpc.ID)(interface {}, error) {
     api.filtersMu.Lock()
     defer api.filtersMu.Unlock()
     if f, found: = api.filters[id];
     found {
-        if !f.deadline.Stop() { // 如果定时器已经触发，但是 filter 还没有移除，那么我们先接收定时器的值，然后重置定时器
+        if !f.deadline.Stop() { // If the timer has been triggered, but the filter has not been removed, then we first receive the value of the timer and then reset the timer.
             // timer expired but filter is not yet removed in timeout loop
             // receive timer value and reset timer
             < -f.deadline.C
@@ -402,7 +400,6 @@ func(api * PublicFilterAPI) GetLogs(ctx context.Context, crit FilterCriteria)([]
 						crit.ToBlock = big.NewInt(rpc.LatestBlockNumber.Int64())
 				}
 				// Create and run the filter to get all the logs
-				// 创建了一个 Filter 对象 然后调用 filter.Logs
 		filter: = New(api.backend, crit.FromBlock.Int64(), crit.ToBlock.Int64(), crit.Addresses, crit.Topics)
 		logs, err: = filter.Logs(ctx)
 		if err != nil {
@@ -438,12 +435,12 @@ type Backend interface {
 type Filter struct {
 	backend Backend				// backend
 
-	db         ethdb.Database	// 数据库
-	begin, end int64			// 开始结束区块
-	addresses  []common.Address	// 筛选地址
-	topics     [][]common.Hash	// 筛选主题
+	db         ethdb.Database	// database
+	begin, end int64			// Start, ending block
+	addresses  []common.Address	// Filter address
+	topics     [][]common.Hash	// Filter topic
 
-	matcher *bloombits.Matcher	// 布隆过滤器的匹配器
+	matcher *bloombits.Matcher	// Bloom filter matcher
 }
 ```
 
