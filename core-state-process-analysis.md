@@ -63,7 +63,7 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 }
 ```
 
-执行 Message
+Execute Message
 
 ```go
 // ApplyMessage computes the new state by applying the given message
