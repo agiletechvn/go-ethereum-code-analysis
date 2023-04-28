@@ -10,6 +10,7 @@ The process, I hope to start from the low-level technical components that rely o
 - [go ethereum code analysis (account, smart contract, logs, etc...)](/go-ethereum-code-analysis.md)
 - [yellow book symbol index](symbol-index.md)
 - [rlp, rlpx analysis](/rlp-analysis.md)
+- [rlp, rlpx analysis(updated)](/rlp-v2.md)
 - [trie source analysis](/trie-analysis.md)
 - [ethdb analysis](/ethdb-analysis.md)
 - [rpc analysis](/rpc-analysis.md)
