@@ -17,9 +17,9 @@ The basic properties of the Trie tree can be summarized as:
 - All children of each node contain different strings.  
 
 ## Patricia Tries (prefix tree)  
-The difference between a prefix tree and a Trie tree is that the Trie tree assigns a node to each string, which degenerates the Trie tree of strings that are long but have no public nodes into an array. In Ethereum, many such nodes are constructed by hackers to cause denial of service attacks. The difference between prefix trees is that if the nodes have a common prefix, then the common prefix is ​​used, otherwise all the remaining nodes are inserted into the same node. The optimization of Patricia relative to Tire is as follows:
+The difference between a prefix tree and a Trie tree is that the Trie tree assigns a node to each string, which degenerates the Trie tree of strings that are long but have no public nodes into an array. In Ethereum, many such nodes are constructed by hackers to cause denial of service attacks. The difference between prefix trees is that if the nodes have a common prefix, then the common prefix is ​​used, otherwise all the remaining nodes are inserted into the same node. The optimization of Patricia relative to Trie is as follows:
 
-![Optimization of Tire to Patricia](picture/patricia_tire.png)
+![Optimization of Trie to Patricia](picture/patricia_trie.png)
 
 ![image](picture/trie_2.png)
 
