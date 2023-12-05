@@ -97,14 +97,14 @@ func (s *scheduler) run(sections chan uint64, dist chan *request, done chan []by
 ```mermaid
 graph LR
 
-subgraph "A"
+subgraph " "
   id1(sections)
   id2((scheduleRequests))
 end
 id1 --> id2
 id2 --> dist
 
-subgraph "B"
+subgraph " "
   id3(scheduleDelivers)
   id4>deliver]
 end
